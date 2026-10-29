@@ -26,6 +26,18 @@ Zebrano 22 pomysły (8 o tym, *na czym* to zbudować, 14 o tym, *co* aplikacja m
 
 ---
 
+## Ustalenia (2026-10-29)
+
+Paweł odpowiedział na trzy pytania: **skala podatkowa, bez VAT, pełny ZUS**. Co to zmienia:
+
+- **Księga = KPiR.** Koszty obniżają podatek i składkę zdrowotną, więc księgowanie kosztów naprawdę ma znaczenie.
+- **Koszty księgujemy w kwocie brutto.** Bez VAT nie odliczasz podatku z faktury, więc cała kwota jest kosztem.
+- **Odpada JPK_V7.** Duże uproszczenie.
+- **Dochodzi miesięczna zaliczka na podatek** (12% powyżej kwoty wolnej, 32% po przekroczeniu progu). Pomysł „Wyliczenie zaliczki” przechodzi z „później” do „teraz”.
+- **ZUS:** składki społeczne są stałe przez cały rok (liczone od ustawowej podstawy), a zdrowotna to 9% dochodu z danego miesiąca, ale nie mniej niż ustawowe minimum. Dlatego deklaracja DRA zmienia się co miesiąc i aplikacja musi ją robić co miesiąc. Zapłacone składki społeczne obniżają dochód do podatku.
+- **Kolejność w miesiącu:** raport z kasy + faktury z KSeF → KPiR → dochód → składka zdrowotna i DRA → zaliczka na podatek. Wszystko płatne do 20. dnia następnego miesiąca.
+- **Do sprawdzenia przy planowaniu:** obowiązek prowadzenia KPiR w programie i wysyłki pliku JPK_PKPIR (zapowiadany od 2026/2027). Jeśli wejdzie, aplikacja powinna umieć go wygenerować.
+
 ## Pomysły, które przetrwały odsiew
 
 ### 1. Prosta aplikacja w przeglądarce, na małym serwerze (REKOMENDACJA – technologia)
@@ -85,7 +97,6 @@ Zebrano 22 pomysły (8 o tym, *na czym* to zbudować, 14 o tym, *co* aplikacja m
 | Pomysł | Dlaczego później |
 |---|---|
 | Przypomnienia o terminach (ZUS i podatek do 20., VAT do 25.) – mail lub powiadomienie | Tanie i przydatne, ale dopiero gdy jest co przypominać |
-| Wyliczenie miesięcznej zaliczki na podatek | Potrzebne tylko przy skali/liniowym; zależy od odpowiedzi z sekcji „trzy rzeczy” |
 | Dodawanie kosztów spoza KSeF (zdjęcie paragonu, faktura zagraniczna np. za oprogramowanie) | Takie koszty się zdarzą (np. Google, Apple, OpenAI nie wystawiają faktur w KSeF), ale na start można je wpisać ręcznie |
 
 ## Pomysły odrzucone (i dlaczego)
@@ -111,10 +122,8 @@ Gotowe programy online (np. inFakt, wFirma, Fakturownia z księgowością) koszt
 | 3 | Księga z zapamiętywaniem kategorii | szybka wygrana | teraz |
 | 4 | Formularz raportu z kasy | szybka wygrana | teraz |
 | 5 | ZUS + plik DRA do eZUS | średnia inwestycja | teraz, po KSeF |
+| 6 | Miesięczna zaliczka na podatek (skala) | szybka wygrana | teraz, razem z ZUS |
 
 ## Następny krok
 
-Brainstorm (dev-brainstorm) z trzema pytaniami na start:
-1. Jaka forma opodatkowania: ryczałt, skala czy liniowy?
-2. Czy firma jest płatnikiem VAT?
-3. Jaki ZUS płacisz (pełny, mały ZUS plus, preferencyjny, ulga na start)?
+Brainstorm (dev-brainstorm). Trzy podstawowe pytania mają już odpowiedź (skala, bez VAT, pełny ZUS). Do ustalenia w brainstormie: gdzie stoi serwer, jak logujesz się do KSeF (token czy certyfikat), jak wygląda miesięczny „rytuał” w aplikacji i czy chcesz też zestawienie roczne pod PIT-36.
