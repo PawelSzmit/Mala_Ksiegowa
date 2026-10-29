@@ -1,0 +1,27 @@
+{
+  "year": 2027,
+  "status": "prognoza",
+  "notes": [
+    "Kwoty w groszach, stawki w punktach bazowych (1952 = 19,52%).",
+    "DO POTWIERDZENIA W GRUDNIU 2026: podstawa składek społecznych = 60% prognozowanego przeciętnego wynagrodzenia z projektu budżetu na 2027 (10 033 zł → 6019,80 zł). Ostateczna kwota po uchwaleniu budżetu i komunikacie ZUS.",
+    "Pewne: minimalne wynagrodzenie od 1.01.2027 = 4950 zł (Dz.U. 2026 poz. 1213) → minimum zdrowotnej od lutego 2027 = 445,50 zł; za styczeń 2027 obowiązuje jeszcze 432,54 zł (rok składkowy 2026).",
+    "DO POTWIERDZENIA: skala PIT na 2027 – w Sejmie projekt zmiany (próg 130 000 zł, 24% do 150 000 zł, 32% powyżej). Do czasu uchwalenia przyjęta skala z 2026.",
+    "Stopa wypadkowa 1,67% – sprawdzić, czy nie zmienia się od kwietnia 2027."
+  ],
+  "social": {
+    "base": 601980,
+    "rates": { "emerytalne": 1952, "rentowe": 800, "wypadkowe": 167, "chorobowe": 245, "funduszPracy": 245 }
+  },
+  "health": {
+    "rate": 900,
+    "minBaseJanuary": 480600,
+    "minBaseFromFebruary": 495000
+  },
+  "pit": {
+    "brackets": [
+      { "upTo": 12000000, "rate": 1200 },
+      { "upTo": null, "rate": 3200 }
+    ],
+    "taxReducingAmount": 360000
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "year": 2026,
+  "status": "potwierdzone",
+  "notes": [
+    "Kwoty w groszach, stawki w punktach bazowych (1952 = 19,52%).",
+    "Składki społeczne: zus.pl, „Informacja o wysokości składek na ubezpieczenia społeczne w 2026 r.” (2.02.2026).",
+    "Składka zdrowotna: art. 81 ust. 2c ustawy o świadczeniach opieki zdrowotnej; minimum: ta sama informacja ZUS (314,96 zł za styczeń, 432,54 zł od lutego).",
+    "PIT: art. 27 ust. 1 ustawy o PIT (12% do 120 000 zł, 32% nadwyżki, kwota zmniejszająca 3600 zł)."
+  ],
+  "social": {
+    "base": 565200,
+    "rates": { "emerytalne": 1952, "rentowe": 800, "wypadkowe": 167, "chorobowe": 245, "funduszPracy": 245 }
+  },
+  "health": {
+    "rate": 900,
+    "minBaseJanuary": 349950,
+    "minBaseFromFebruary": 480600
+  },
+  "pit": {
+    "brackets": [
+      { "upTo": 12000000, "rate": 1200 },
+      { "upTo": null, "rate": 3200 }
+    ],
+    "taxReducingAmount": 360000
+  }
+}

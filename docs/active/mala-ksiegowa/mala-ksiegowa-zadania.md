@@ -22,16 +22,32 @@ Stan (2026-10-29 wieczór): próba na testowym KSeF udana – logowanie tokenem,
 - [x] Uruchomić skrypt na serwerze vh.pl w Terminalu cPanelu (Claude, za zgodą Pawła) – WYNIK: OK (Node 24.12.1), katalog próbny usunięty
 - [ ] **Punkt kontrolny**: pokazać Pawłowi wynik i decyzję go/no-go (Claude → Paweł)
 
+## Do poprawy po review fazy 1
+Raport: `docs/active/mala-ksiegowa/review-faza-1.md`. Decyzja: można iść dalej z zastrzeżeniami (0×P1, 2×P2, 6×P3). P2 zamknąć przed/w etapie 4.
+- [ ] P2-1: górny limit czekania po 429; przycisk „sprawdź teraz” bez ponawiania i z blokadą częstych kliknięć; XML trzymany w bazie (Claude, etap 4)
+- [ ] P2-2: pobieranie oknami od `permanentStorageHwmDate` z `restrictToPermanentStorageHwmDate`, kontynuacja przy `isTruncated` zamiast błędu, punkt startowy zapisany w bazie (Claude, etap 4)
+- [ ] P3-1: kwoty z KSeF do groszy przez `Math.round` lub z tekstu XML (Claude, etap 4)
+- [ ] P3-2: test „wygasły refreshToken → ponowne logowanie” (Claude, etap 4)
+- [ ] P3-3: jedna synchronizacja na raz (blokada) (Claude, etap 4)
+- [ ] P3-5: w instrukcji wdrożenia: token tylko w zmiennych środowiskowych / zaszyfrowanej bazie (Claude, etap 8)
+- [ ] P3-6: poprawić nieaktualne fragmenty planu i kontekstu (gałąź, „tylko dokumenty”, otwarte pytanie o filtr) (Claude)
+
 ## Etap 2. Reguły podatkowe i składkowe
-- [ ] Zapytać Pawła: czy płaci dobrowolne chorobowe (Claude → Paweł)
-- [ ] Sprawdzić w oficjalnych źródłach i zapisać w `config/years/2026.json` i `2027.json`: składki społeczne, minimum zdrowotnej, progi i stawki PIT, kwota zmniejszająca (Claude)
-- [ ] Potwierdzić, od dochodu z którego miesiąca liczy się składka zdrowotna i jak wygląda styczeń (Claude)
-- [ ] `src/rules/kpir.ts`: sumy miesięczne i narastające (Claude)
-- [ ] `src/rules/zus.ts`: składki społeczne i zdrowotna (Claude)
-- [ ] `src/rules/pit.ts`: zaliczka narastająco, 12%/32%, zaokrąglenia (Claude)
-- [ ] `src/rules/holiday.ts`: jeden miesiąc wakacji w roku (Claude)
-- [ ] Testy: strata, zero, minimum zdrowotnej, przekroczenie progu, dochód poniżej kwoty wolnej, miesiąc wakacji, drugi miesiąc wakacji odrzucony, korekta wcześniejszego miesiąca (Claude)
-- [ ] **Punkt kontrolny**: tabela z 2–3 przykładowymi miesiącami do sprawdzenia przez Pawła lub jego księgową (Claude → Paweł)
+Stan (2026-10-29): moduł reguł gotowy, 28 nowych testów zielonych. Czeka na punkt kontrolny z Pawłem/księgową.
+- [x] Zapytać Pawła: czy płaci dobrowolne chorobowe (Claude → Paweł) – **nie płaci**
+- [x] Sprawdzić w oficjalnych źródłach i zapisać w `config/years/2026.json` i `2027.json`: składki społeczne, minimum zdrowotnej, progi i stawki PIT, kwota zmniejszająca (Claude) – 2026 potwierdzone (zus.pl), 2027 częściowo prognoza
+- [x] Potwierdzić, od dochodu z którego miesiąca liczy się składka zdrowotna i jak wygląda styczeń (Claude) – z poprzedniego miesiąca; za styczeń od dochodu z grudnia (art. 81 ust. 2c)
+- [x] `src/rules/kpir.ts`: sumy miesięczne i narastające (Claude)
+- [x] `src/rules/zus.ts`: składki społeczne i zdrowotna (Claude)
+- [x] `src/rules/pit.ts`: zaliczka narastająco, 12%/32%, zaokrąglenia (Claude)
+- [x] `src/rules/holiday.ts`: jeden miesiąc wakacji w roku (Claude)
+- [x] `src/rules/year.ts`: cały rok w jednym wywołaniu (składki płacone w następnym miesiącu, FP jako koszt) (Claude)
+- [x] Testy: strata, zero, minimum zdrowotnej, przekroczenie progu, dochód poniżej kwoty wolnej, miesiąc wakacji, drugi miesiąc wakacji odrzucony, korekta wcześniejszego miesiąca (Claude)
+- [x] Tabela przykładowych miesięcy: `docs/active/mala-ksiegowa/przyklad-wyliczen.md` (generuje `node scripts/rules-example.ts`) (Claude)
+- [ ] **Punkt kontrolny**: Paweł lub jego księgowa sprawdza tabelę, zwłaszcza interpretację straty i nadwyżki składek w zdrowotnej (Claude → Paweł)
+- [ ] W grudniu 2026: potwierdzić podstawę składek 2027 (komunikat ZUS po budżecie) i skalę PIT 2027 (projekt 130 tys./24%/150 tys. w Sejmie); zmienić `status` w `2027.json` na „potwierdzone” (Claude)
+- [ ] Etap 5: Fundusz Pracy zapłacony w miesiącu ma się pojawić w KPiR jako koszt automatycznie (moduł reguł już go dolicza; nie wpisywać ręcznie, żeby nie liczyć podwójnie) (Claude)
+- [ ] Etap 6: zapisywać faktyczne daty i kwoty wpłat składek (domyślnie: składki za miesiąc płacone w następnym) (Claude)
 
 ## Etap 3. Szkielet, baza, logowanie
 - [ ] `server.mjs` i serwer HTTP z szablonami stron (Claude)

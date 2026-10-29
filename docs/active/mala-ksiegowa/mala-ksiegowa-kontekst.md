@@ -15,6 +15,7 @@ Paweł – właściciel firmy, nie programista. Komunikacja po polsku, prostym j
 - Nie jest płatnikiem VAT → koszty księgowane w kwocie brutto, brak JPK_V7.
 - Pełny ZUS → składki społeczne stałe w roku, składka zdrowotna 9% dochodu (z minimum) → DRA co miesiąc.
 - Raz w roku wakacje składkowe.
+- Nie płaci dobrowolnego ubezpieczenia chorobowego (Paweł, 2026-10-29).
 - Przychód: tylko miesięczny raport z kasy fiskalnej.
 - Do KSeF Paweł loguje się Profilem Zaufanym; aplikacja dostaje od niego token KSeF z prawem tylko do odczytu faktur. Tokeny działają w 2027 (Paweł potwierdził na stronie MF).
 - JPK_PKPIR dla firm bez VAT obowiązuje od 2028 – poza zakresem.
@@ -61,8 +62,8 @@ Paweł – właściciel firmy, nie programista. Komunikacja po polsku, prostym j
 
 | Pytanie | Kto / kiedy |
 |---|---|
-| Z którego miesiąca dochód jest podstawą zdrowotnej, jak liczy się styczeń, minimum 2026/2027 | Etap 2, oficjalne źródła ZUS |
-| Kwoty składek społecznych 2026/2027; czy Paweł płaci dobrowolne chorobowe | Etap 2, zapytać Pawła |
+| Interpretacja straty i nadwyżki składek w zdrowotnej | Punkt kontrolny etapu 2, księgowa |
+| Podstawa składek 2027 (po budżecie) i skala PIT 2027 (projekt w Sejmie) | Grudzień 2026 |
 | Aktualny wzór kolumn KPiR (np. kolumna na numer KSeF) | Etap 5, rozporządzenie MF |
 | Schemat KEDU i postać DRA w miesiącu wakacji | Etapy 6–7, zus.pl |
 | Nazwa subdomeny | Etap 8, zapytać Pawła |
@@ -101,6 +102,29 @@ Co potwierdzono na prawdziwym teście:
 ### Próba z serwera vh.pl (2026-10-29, za zgodą Pawła)
 - Node na serwerze nie jest w PATH: pełna ścieżka `/opt/alt/alt-nodejs24/root/usr/bin/node` (v24.12.1). Dostępne też inne wersje w `/opt/alt/alt-nodejsXX`. `openssl` jest w `/bin/openssl`.
 - Skrypt próby złożony w jeden plik `.mjs` (typy usunięte przez `module.stripTypeScriptTypes`), przeniesiony przez Terminal jako base64+gzip do `~/mala-ksiegowa-proba`, uruchomiony z testowym tokenem → `WYNIK: OK` (logowanie, 1 faktura kosztowa, XML pobrany). Katalog usunięty po próbie, historia poleceń wyczyszczona.
+
+### Review etapu 1 (2026-10-29)
+- Raport: `review-faza-1.md`. Decyzja: **można iść dalej z zastrzeżeniami** (0×P1, 2×P2, 6×P3).
+- Najważniejsze: (1) limit MF 20 zapytań o listę faktur na godzinę i rosnące blokady po 429 – przycisk „sprawdź teraz” nie może czekać ani ponawiać; (2) nocne pobieranie ma iść przylegającymi oknami od `permanentStorageHwmDate` (oficjalny dokument „przyrostowe pobieranie faktur”), a nie „ostatnie N dni”. Oba do zrobienia w etapie 4.
+- Świadoma decyzja: pobieramy tylko rolę nabywcy (`Subject2`).
+
+## Etap 2 – reguły podatkowe i składkowe (2026-10-29)
+
+Pliki: `config/years/2026.json`, `config/years/2027.json`, `src/rules/{money,config,kpir,zus,pit,holiday,year}.ts`, `test/rules/rules.test.ts`, `scripts/rules-example.ts`, `docs/active/mala-ksiegowa/przyklad-wyliczen.md`. Testy: `npm test` 39/39 (11 KSeF + 28 reguł), `npm run typecheck` czysto.
+
+Źródła (sandbox nie ma dostępu do zus.pl/sejm.gov.pl – czytane przez przeglądarkę Pawła):
+- zus.pl „Informacja o wysokości składek na ubezpieczenia społeczne w 2026 r.” (2.02.2026): podstawa 5652 zł, emerytalne 1103,27, rentowe 452,16, wypadkowe 94,39 (1,67%), chorobowe 138,47, FP+FS 138,47; razem bez chorobowego 1788,29 zł. Minimum zdrowotnej (skala): 314,96 zł za styczeń 2026, 432,54 zł od lutego 2026 do stycznia 2027.
+- Art. 81 ust. 2c ustawy o świadczeniach opieki zdrowotnej (tekst jedn. Dz.U. 2024 poz. 146, przez api.sejm.gov.pl): podstawa = dochód z miesiąca poprzedniego, liczony narastająco, pomniejszony o zapłacone składki emerytalne, rentowe, chorobowe, wypadkowe (bez FP).
+- Dz.U. 2026 poz. 1213: płaca minimalna 2027 = 4950 zł → minimum zdrowotnej od lutego 2027 = 445,50 zł.
+- 2027 prognoza: przeciętne wynagrodzenie z projektu budżetu 10 033 zł → podstawa 6019,80 zł; skala PIT 2027 – projekt zmian w Sejmie, w pliku na razie skala 2026.
+
+Decyzje:
+- Kwoty w groszach, stawki w punktach bazowych; każdą składkę ZUS zaokrąglamy do grosza osobno (tak jak ZUS – suma zgadza się z komunikatem).
+- Podstawa i podatek PIT do pełnych złotych (art. 63 Ordynacji). Zaliczka = podatek narastająco − zaliczki należne wcześniej, nigdy ujemna.
+- Fundusz Pracy nie jest odliczeniem, tylko kosztem; `computeYear` dolicza zapłacony FP do kosztów sam – KPiR nie może go mieć drugi raz z ręki.
+- Domyślnie składki za miesiąc M są płacone w M+1 (termin 20.) i wtedy odliczane; można podać faktyczne wpłaty (`socialPaid`).
+- Zdrowotna: dochód nie bywa ujemny; strata i nadwyżka składek przechodzą na kolejne miesiące (liczenie narastające). Dosłowne czytanie art. 81 ust. 2c pkt 4 („minus dochody za poprzednie miesiące” po odliczeniu składek) dodawałoby składki z powrotem – liczymy jak programy księgowe. Do potwierdzenia na punkcie kontrolnym; różnice wyrównuje i tak roczne rozliczenie zdrowotnej.
+- Wakacje: w tym miesiącu społeczne i FP = 0, zdrowotna normalnie; w następnym miesiącu nie ma czego odliczyć. Wniosek RWS w miesiącu poprzedzającym (`rwsApplicationMonth`).
 
 ## Planowany układ plików
 
