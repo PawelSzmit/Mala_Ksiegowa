@@ -9,7 +9,7 @@ Oznaczenia: [ ] do zrobienia, [x] zrobione. **Claude** = zadanie dla Claude, **P
 - [x] Dokumentacja wykonawcza w `docs/active/mala-ksiegowa/` (Claude)
 
 ## Etap 1. Próba KSeF (go/no-go)
-Stan (2026-10-29 wieczór): próba na testowym KSeF udana – logowanie tokenem, lista faktur kosztowych i pobranie XML działają. Zostało: próba z serwera vh.pl (za zgodą Pawła) i decyzja go/no-go.
+Stan (2026-10-29 wieczór): próba na testowym KSeF udana – logowanie tokenem, lista faktur kosztowych i pobranie XML działają. Próba z serwera vh.pl też udana. Zostało: decyzja go/no-go Pawła.
 - [x] Przeczytać oficjalną dokumentację API KSeF 2.0: logowanie tokenem, pobieranie faktur, limity (Claude)
 - [x] Założyć projekt Node + TypeScript bez zależności produkcyjnych: `package.json`, `tsconfig.json`, testy wbudowane w Node (Claude)
 - [x] Klient `src/ksef/client.ts`: challenge → szyfrowanie tokenu → ksef-token → status → redeem → refresh, zapytanie o faktury (nabywca), pobranie XML, ponawianie po 429 (Claude)
@@ -19,7 +19,7 @@ Stan (2026-10-29 wieczór): próba na testowym KSeF udana – logowanie tokenem,
 - [x] Zdobyć testowy token KSeF: logowanie certyfikatem testowym (XAdES, samopodpisanym) dla wymyślonego NIP-u, potem `POST /tokens` z uprawnieniem `InvoiceRead` (Claude) → `scripts/ksef-test-token.ts`
 - [x] Mieć w testowym KSeF co najmniej jedną fakturę zakupową: wystawić z drugiego testowego NIP-u na pierwszy (wymaga sesji z szyfrowaniem i poprawnej faktury FA(3)) albo użyć aplikacji testowej MF (Claude) → `scripts/ksef-test-invoice.ts`
 - [x] Uruchomić `scripts/ksef-spike.ts` na testowym KSeF z komputera z siecią i potwierdzić nazwy pól w odpowiedziach (Claude) – WYNIK: OK, typy poprawione (nabywca, isTruncated)
-- [ ] Uruchomić skrypt na serwerze vh.pl w Terminalu cPanelu (Claude, za zgodą Pawła)
+- [x] Uruchomić skrypt na serwerze vh.pl w Terminalu cPanelu (Claude, za zgodą Pawła) – WYNIK: OK (Node 24.12.1), katalog próbny usunięty
 - [ ] **Punkt kontrolny**: pokazać Pawłowi wynik i decyzję go/no-go (Claude → Paweł)
 
 ## Etap 2. Reguły podatkowe i składkowe

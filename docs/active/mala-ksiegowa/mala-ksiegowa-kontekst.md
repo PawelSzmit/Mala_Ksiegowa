@@ -2,7 +2,7 @@
 
 Gałąź: `claude/project-thread-eptw6o` (kontynuacja `claude/project-thread-tqtl79`)
 Ostatnia aktualizacja: 2026-10-29
-Stan: Etap 1 prawie gotowy – próba na testowym KSeF udana (logowanie tokenem, lista faktur kosztowych, pobranie XML). Zostało: ta sama próba z serwera vh.pl (za zgodą Pawła) i decyzja go/no-go.
+Stan: Etap 1 prawie gotowy – próba na testowym KSeF udana (logowanie tokenem, lista faktur kosztowych, pobranie XML). Próba z serwera vh.pl też udana (2026-10-29). Zostało: decyzja go/no-go Pawła.
 
 ## Kim jest użytkownik
 
@@ -97,6 +97,10 @@ Co potwierdzono na prawdziwym teście:
 - Faktura jest widoczna z datą `PermanentStorage` po ok. 1 sekundzie od przyjęcia.
 - Specyfikacja OpenAPI do sprawdzania pól: `https://api-test.ksef.mf.gov.pl/docs/v2/openapi.json`.
 - Logowanie XAdES zbudowane bez bibliotek (`scripts/lib/ksef-test-auth.ts`): KSeF przyjął ręcznie złożony podpis XAdES-BES (RSA-SHA256, exc-c14n, `verifyCertificateChain=false`). To narzędzie tylko do testów – aplikacja go nie używa.
+
+### Próba z serwera vh.pl (2026-10-29, za zgodą Pawła)
+- Node na serwerze nie jest w PATH: pełna ścieżka `/opt/alt/alt-nodejs24/root/usr/bin/node` (v24.12.1). Dostępne też inne wersje w `/opt/alt/alt-nodejsXX`. `openssl` jest w `/bin/openssl`.
+- Skrypt próby złożony w jeden plik `.mjs` (typy usunięte przez `module.stripTypeScriptTypes`), przeniesiony przez Terminal jako base64+gzip do `~/mala-ksiegowa-proba`, uruchomiony z testowym tokenem → `WYNIK: OK` (logowanie, 1 faktura kosztowa, XML pobrany). Katalog usunięty po próbie, historia poleceń wyczyszczona.
 
 ## Planowany układ plików
 
