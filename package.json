@@ -1,0 +1,17 @@
+{
+  "name": "mala-ksiegowa",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Prosta księgowość jednoosobowej firmy: faktury z KSeF, KPiR, ZUS, zaliczka PIT",
+  "engines": { "node": ">=22.18" },
+  "scripts": {
+    "test": "node --test \"test/*.test.ts\"",
+    "typecheck": "tsc --noEmit",
+    "ksef:spike": "node scripts/ksef-spike.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0"
+  }
+}

@@ -9,12 +9,16 @@ Oznaczenia: [ ] do zrobienia, [x] zrobione. **Claude** = zadanie dla Claude, **P
 - [x] Dokumentacja wykonawcza w `docs/active/mala-ksiegowa/` (Claude)
 
 ## Etap 1. Próba KSeF (go/no-go)
-- [ ] Przeczytać oficjalną dokumentację API KSeF 2.0 (test): uwierzytelnienie tokenem, wyszukiwanie faktur jako nabywca, limity (Claude)
-- [ ] Założyć projekt Node 24 + TypeScript: `package.json`, `tsconfig.json`, narzędzie do testów (Claude)
-- [ ] Napisać klienta: challenge → szyfrowanie tokenu → ksef-token → status → redeem → refresh (Claude)
-- [ ] Na środowisku testowym: utworzyć dwa testowe NIP-y, wygenerować token, wystawić fakturę z jednego na drugi (Claude)
-- [ ] Skrypt `scripts/ksef-spike.ts`: pobranie listy faktur zakupowych i XML jednej faktury (Claude)
-- [ ] Testy: zły token, odświeżenie dostępu, pusta lista, wiele stron (Claude)
+Stan: kod i testy bez sieci gotowe; próba na prawdziwym testowym KSeF czeka na środowisko z dostępem do sieci.
+- [x] Przeczytać oficjalną dokumentację API KSeF 2.0: logowanie tokenem, pobieranie faktur, limity (Claude)
+- [x] Założyć projekt Node + TypeScript bez zależności produkcyjnych: `package.json`, `tsconfig.json`, testy wbudowane w Node (Claude)
+- [x] Klient `src/ksef/client.ts`: challenge → szyfrowanie tokenu → ksef-token → status → redeem → refresh, zapytanie o faktury (nabywca), pobranie XML, ponawianie po 429 (Claude)
+- [x] Szyfrowanie tokenu `src/ksef/crypto.ts` (RSA-OAEP SHA-256), sprawdzone też poleceniem `openssl` (Claude)
+- [x] Skrypt `scripts/ksef-spike.ts` (Claude)
+- [x] Testy z udawanym KSeF (10 zielonych): zły token, zły NIP, odświeżenie dostępu, pusta lista, wiele stron, 429, brak logowania (Claude)
+- [ ] Zdobyć testowy token KSeF: logowanie certyfikatem testowym (XAdES, samopodpisanym) dla wymyślonego NIP-u, potem `POST /tokens` z uprawnieniem `InvoiceRead` (Claude, wymaga sieci do `api-test.ksef.mf.gov.pl`)
+- [ ] Mieć w testowym KSeF co najmniej jedną fakturę zakupową: wystawić z drugiego testowego NIP-u na pierwszy (wymaga sesji z szyfrowaniem i poprawnej faktury FA(3)) albo użyć aplikacji testowej MF (Claude)
+- [ ] Uruchomić `scripts/ksef-spike.ts` na testowym KSeF z komputera z siecią i potwierdzić nazwy pól w odpowiedziach (Claude)
 - [ ] Uruchomić skrypt na serwerze vh.pl w Terminalu cPanelu (Claude, za zgodą Pawła)
 - [ ] **Punkt kontrolny**: pokazać Pawłowi wynik i decyzję go/no-go (Claude → Paweł)
 

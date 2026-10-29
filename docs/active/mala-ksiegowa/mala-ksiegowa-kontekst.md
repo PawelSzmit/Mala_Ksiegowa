@@ -2,7 +2,7 @@
 
 Gałąź: `claude/project-thread-tqtl79`
 Ostatnia aktualizacja: 2026-10-29
-Stan: dokumentacja gotowa, kod jeszcze nie powstał. Następny krok: Etap 1.
+Stan: Etap 1 w połowie – kod klienta KSeF i testy bez sieci gotowe (10 zielonych), próby na prawdziwym testowym KSeF jeszcze nie było.
 
 ## Kim jest użytkownik
 
@@ -68,6 +68,17 @@ Paweł – właściciel firmy, nie programista. Komunikacja po polsku, prostym j
 | Schemat KEDU i postać DRA w miesiącu wakacji | Etapy 6–7, zus.pl |
 | Nazwa subdomeny | Etap 8, zapytać Pawła |
 | Który miesiąc Paweł wybiera na wakacje w 2027 | Etap 7, zapytać Pawła |
+
+## Etap 1 – co zrobione i co odkryto (2026-10-29)
+
+- Środowisko, w którym pracowano, nie miało dostępu do `api-test.ksef.mf.gov.pl` (blokada sieci), dlatego prawdziwej próby nie wykonano. Paweł dodał potem środowisko z dostępem – próbę robi nowa sesja.
+- Oficjalna dokumentacja jest w repozytorium `CIRFMF/ksef-docs` (pliki `.md` dostępne przez `raw.githubusercontent.com`). Nieoficjalna kopia `flopsstuff.github.io` nie była dostępna z tego środowiska.
+- Zrobione: `src/ksef/types.ts`, `src/ksef/crypto.ts`, `src/ksef/client.ts`, `scripts/ksef-spike.ts`, `test/ksef.test.ts` (udawany serwer KSeF z prawdziwym szyfrowaniem RSA), klucz i certyfikat wyłącznie testowe w `test/fixtures/`.
+- Uruchamianie: `npm install`, `npm test`, `npm run typecheck`. Node 22.18+ uruchamia pliki `.ts` bez budowania (importy z rozszerzeniem `.ts`, bez enumów i innych składni nieusuwalnych). Na serwerze jest Node 24.
+- Kształt odpowiedzi KSeF w kliencie (`timestampMs`, `authenticationToken.token`, `status.code` 100/200, `hasMore`, `invoices[]`) wzięty z dokumentacji i opisów; **do potwierdzenia na prawdziwym teście** (typy są luźne, żeby nie wywrócić się na drobnych różnicach).
+- **Odkrycie: token testowy wymaga logowania certyfikatem (XAdES).** Token KSeF można wygenerować tylko po jednorazowym zalogowaniu podpisem XAdES (na środowisku TEST dozwolony certyfikat samopodpisany). To nie jest potrzebne w aplikacji produkcyjnej (Paweł tworzy token Profilem Zaufanym), tylko do przygotowania testu. Do zrobienia osobnym skryptem w `scripts/` (nie w aplikacji).
+- Faktura testowa: żeby sprawdzić pobieranie XML, w KSeF musi być faktura zakupowa. Wystawienie wymaga sesji z szyfrowaniem (klucz AES zaszyfrowany RSA) i poprawnego pliku FA(3). Alternatywa: aplikacja testowa MF. Jeśli to zbyt kosztowne – pobranie XML sprawdzimy dopiero z prawdziwą fakturą w etapie 8, a w etapie 1 wystarczy logowanie i zapytanie o listę.
+- Poprawka do planu: filtr „nabywca” = `Subject2` (zgodnie z typami podmiotów w dokumentacji: Subject1 sprzedawca, Subject2 nabywca) – nadal do potwierdzenia na teście.
 
 ## Planowany układ plików
 
