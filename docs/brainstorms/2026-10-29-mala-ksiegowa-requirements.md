@@ -31,6 +31,11 @@ Cel: cały miesiąc w 5–10 minut.
 - **R6. Księga przychodów i rozchodów.** Aplikacja sama układa wpisy w KPiR zgodnie z przepisami (numeracja, kolumny, sumy miesięczne i od początku roku). Możliwość wydruku lub zapisania jako PDF.
 - **R7. ZUS.** Składki społeczne wpisane raz na rok (przy pełnym ZUS są stałe). Składka zdrowotna liczona co miesiąc: 9% dochodu z miesiąca, nie mniej niż ustawowe minimum. Wynik: kwota do zapłaty i gotowy plik DRA do importu w eZUS.
 - **R8. Zaliczka na podatek.** Wyliczana co miesiąc narastająco od początku roku (dochód minus zapłacone składki społeczne, stawka 12%, a po przekroczeniu progu 32%). Wynik: kwota do zapłaty na mikrorachunek.
+- **R10. Wakacje składkowe.** Raz w roku możesz zaznaczyć wybrany miesiąc jako „wakacje od ZUS”. Wtedy:
+  - aplikacja przypomina, że wniosek (RWS) trzeba złożyć w miesiącu **poprzedzającym** wybrany miesiąc, i przygotowuje dane do niego,
+  - w wybranym miesiącu deklaracja DRA zawiera tylko składkę zdrowotną (wakacje nie zwalniają ze zdrowotnej),
+  - zaliczka na podatek uwzględnia, że w tym miesiącu nie zapłaciłeś składek społecznych,
+  - aplikacja pilnuje limitu: tylko jeden taki miesiąc w roku.
 - **R9. Zamknięcie miesiąca.** Po zamknięciu miesiąca nie da się po cichu zmienić jego danych. Poprawka wymaga świadomego „otwórz ponownie” (żeby kwoty w ZUS i podatku zawsze zgadzały się z księgą).
 
 ## Kryteria sukcesu
@@ -58,13 +63,15 @@ Cel: cały miesiąc w 5–10 minut.
   - Dlaczego: zero dodatkowych kosztów, hosting już opłacony.
   - Cena tej decyzji: aplikacja dzieli serwer ze stroną gabinetu. Jeśli strona zostałaby kiedyś zhakowana, włamywacz jest „w tym samym budynku”. Dlatego R1 (drugie zabezpieczenie logowania) i R2 (tylko prawo odczytu w KSeF) są obowiązkowe, a nie opcjonalne.
 - **Logowanie do KSeF: Profil Zaufany używasz Ty, nie aplikacja.** Profil Zaufany wymaga Twojego potwierdzenia (SMS), więc program nie może się nim logować sam co noc. Rozwiązanie: raz logujesz się Profilem Zaufanym do aplikacji Ministerstwa (Aplikacja Podatnika KSeF) i generujesz tam „klucz” dla programu (token albo certyfikat KSeF) z prawem tylko do odczytu faktur. Ten klucz wklejasz do Mała Księgowej. To jak dorobienie klucza do skrzynki pocztowej dla zaufanej osoby – może wyjmować listy, ale nie może niczego wysłać w Twoim imieniu.
+- **Klucz do KSeF: token.** Ministerstwo potwierdziło, że tokeny działają także w 2027 (sprawdził Paweł na stronie MF). Certyfikat nie jest na razie potrzebny.
+- **JPK_PKPIR poza zakresem.** Dla firm bez VAT obowiązek wysyłki wchodzi dopiero od 2028. Wrócimy do tego w 2027.
 - **Koszty w kwocie brutto, jedna kolumna księgi.** Bez VAT cała kwota faktury jest kosztem.
 
 ## Zależności i założenia
 
 - Założenie: firma to gabinet, którego stroną jest za-horyzont.pl (usługi, bez towarów na sprzedaż, więc bez spisu z natury na koniec roku).
 - Założenie: jedynym przychodem jest kasa fiskalna. Ewentualne faktury dla pacjentów do paragonu nie zwiększają przychodu (ta kwota już jest w raporcie z kasy).
-- Założenie: składki społeczne płacisz w pełnej wysokości przez cały rok (bez przerw, zasiłków, ulg).
+- Założenie: składki społeczne płacisz w pełnej wysokości przez cały rok, z wyjątkiem jednego miesiąca wakacji składkowych (bez zasiłków i innych ulg).
 - Zależność: Ty jednorazowo generujesz w KSeF klucz dla aplikacji (instrukcję przygotujemy).
 
 ## Otwarte pytania
@@ -73,9 +80,8 @@ Cel: cały miesiąc w 5–10 minut.
 - Czy któraś z wyciętych funkcji jest jednak dla Ciebie niezbędna?
 
 ### Do sprawdzenia przy planowaniu (technicznie)
-- Czy klucz dla aplikacji robimy jako token czy certyfikat KSeF. Ministerstwo zapowiadało, że tokeny działają do końca 2026, a później tylko certyfikaty. Do potwierdzenia w aktualnej dokumentacji.
-- W jakiej technologii to piszemy. Hosting na pewno obsługuje PHP. Trzeba sprawdzić, czy cPanel na vh.pl pozwala uruchomić też inne języki, i czy serwer może łączyć się z serwerami KSeF.
-- Czy od 2027 obowiązuje wysyłka księgi w formie pliku JPK_PKPIR razem z zeznaniem rocznym. Jeśli tak, dokładamy jeden przycisk „pobierz JPK_PKPIR”.
+- W jakiej technologii to piszemy. Hosting na pewno obsługuje PHP. Na etapie planowania poprosić Pawła o otwarcie Chrome z zalogowanym cPanelem i samodzielnie sprawdzić, czy da się uruchomić inny język (np. Node.js lub Python) oraz czy serwer może łączyć się z serwerami KSeF.
+- Czy wniosek o wakacje składkowe (RWS) da się przygotować jako plik do wgrania w eZUS, czy trzeba go wypełnić bezpośrednio w eZUS (wtedy aplikacja podaje gotowe dane do przepisania).
 - Aktualne kwoty na 2026 i 2027: minimalna składka zdrowotna, podstawa składek społecznych, progi podatkowe. Będą w ustawieniach roku, nie w kodzie.
 - Jak vh.pl robi kopie zapasowe i czy wystarczą.
 
