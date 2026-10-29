@@ -1,8 +1,8 @@
 # Mała Księgowa – kontekst
 
-Gałąź: `claude/project-thread-tqtl79`
+Gałąź: `claude/project-thread-eptw6o` (kontynuacja `claude/project-thread-tqtl79`)
 Ostatnia aktualizacja: 2026-10-29
-Stan: Etap 1 w połowie – kod klienta KSeF i testy bez sieci gotowe (10 zielonych), próby na prawdziwym testowym KSeF jeszcze nie było.
+Stan: Etap 1 prawie gotowy – próba na testowym KSeF udana (logowanie tokenem, lista faktur kosztowych, pobranie XML). Zostało: ta sama próba z serwera vh.pl (za zgodą Pawła) i decyzja go/no-go.
 
 ## Kim jest użytkownik
 
@@ -48,7 +48,7 @@ Paweł – właściciel firmy, nie programista. Komunikacja po polsku, prostym j
 - Faktury: `POST /invoices/query/metadata` (filtr podmiotu – nabywca, zakres dat, stronicowanie), `GET /invoices/ksef/{ksefNumber}`.
 - Uprawnienia tokenu ustalane przy tworzeniu i niezmienne; dla nas tylko `InvoiceRead`.
 - Środowiska: test `https://api-test.ksef.mf.gov.pl` (dokumentacja `/docs/v2`), demo `https://api-demo.ksef.mf.gov.pl`, produkcja `https://api.ksef.mf.gov.pl/v2`. Środowisko testowe jest wspólne – używać losowych NIP-ów.
-- Niepotwierdzone: dokładna wartość filtra „nabywca” (prawdopodobnie `Subject2`), limity stron. Sprawdzić w oficjalnej dokumentacji w Etapie 1.
+- Potwierdzone na teście: filtr „nabywca” = `Subject2`; `pageSize` 10–250; odpowiedź ma `hasMore` i `isTruncated`.
 - Źródło: nieoficjalna kopia dokumentacji MF (flopsstuff.github.io/ksef-docs) – weryfikować z oficjalną.
 
 ### ZUS
@@ -61,7 +61,6 @@ Paweł – właściciel firmy, nie programista. Komunikacja po polsku, prostym j
 
 | Pytanie | Kto / kiedy |
 |---|---|
-| Filtr „nabywca” i limity stron w KSeF | Etap 1, dokumentacja MF |
 | Z którego miesiąca dochód jest podstawą zdrowotnej, jak liczy się styczeń, minimum 2026/2027 | Etap 2, oficjalne źródła ZUS |
 | Kwoty składek społecznych 2026/2027; czy Paweł płaci dobrowolne chorobowe | Etap 2, zapytać Pawła |
 | Aktualny wzór kolumn KPiR (np. kolumna na numer KSeF) | Etap 5, rozporządzenie MF |
@@ -79,6 +78,25 @@ Paweł – właściciel firmy, nie programista. Komunikacja po polsku, prostym j
 - **Odkrycie: token testowy wymaga logowania certyfikatem (XAdES).** Token KSeF można wygenerować tylko po jednorazowym zalogowaniu podpisem XAdES (na środowisku TEST dozwolony certyfikat samopodpisany). To nie jest potrzebne w aplikacji produkcyjnej (Paweł tworzy token Profilem Zaufanym), tylko do przygotowania testu. Do zrobienia osobnym skryptem w `scripts/` (nie w aplikacji).
 - Faktura testowa: żeby sprawdzić pobieranie XML, w KSeF musi być faktura zakupowa. Wystawienie wymaga sesji z szyfrowaniem (klucz AES zaszyfrowany RSA) i poprawnego pliku FA(3). Alternatywa: aplikacja testowa MF. Jeśli to zbyt kosztowne – pobranie XML sprawdzimy dopiero z prawdziwą fakturą w etapie 8, a w etapie 1 wystarczy logowanie i zapytanie o listę.
 - Poprawka do planu: filtr „nabywca” = `Subject2` (zgodnie z typami podmiotów w dokumentacji: Subject1 sprzedawca, Subject2 nabywca) – nadal do potwierdzenia na teście.
+
+## Etap 1 – próba na testowym KSeF (2026-10-29 wieczór)
+
+Wynik: **działa od początku do końca.** Środowisko tej sesji ma dostęp do `api-test.ksef.mf.gov.pl`.
+
+Jak powtórzyć (wszystko na środowisku testowym, wymyślone NIP-y):
+1. `node scripts/ksef-test-token.ts` – losuje NIP, tworzy certyfikat samopodpisany (`openssl`), loguje się podpisem XAdES, tworzy token z jednym uprawnieniem `InvoiceRead`. NIP i token zapisuje do `.ksef-test.env` (ignorowany przez git), nie na ekran.
+2. `set -a; . ./.ksef-test.env; set +a`
+3. `node scripts/ksef-test-invoice.ts` – drugi wymyślony NIP wystawia jedną fakturę FA(3) na NIP z punktu 1 (sesja z szyfrowaniem AES, szablon `scripts/fixtures/fa3-test-invoice.xml` z oficjalnego klienta MF). Numer KSeF przychodzi po kilku sekundach.
+4. `node scripts/ksef-spike.ts` → „Faktury kosztowe: 1”, XML pobrany, `WYNIK: OK`.
+
+Co potwierdzono na prawdziwym teście:
+- Logowanie tokenem: `timestampMs` w challenge, `authenticationToken.token`, status 100 → 200, redeem zwraca `accessToken`/`refreshToken` z polami `token` i `validUntil`. Odświeżenie (`/auth/token/refresh`) zwraca nowy `accessToken`. Token dostępu ważny ok. 15 minut.
+- Zły token → status 450 „Uwierzytelnianie zakończone niepowodzeniem z powodu błędnego tokenu” (klient zamienia to na czytelny błąd).
+- Token KSeF zawiera znaki `|` (postać `numer|nip-XXXXXXXXXX|sekret`) – w plikach `.env` musi być w cudzysłowie.
+- Metadane faktury: `ksefNumber`, `invoiceNumber`, `issueDate`, `invoicingDate`, `acquisitionDate`, `permanentStorageDate`, `seller{nip,name}`, `buyer{identifier{type,value},name}` (uwaga: nabywca NIE ma pola `nip`), `netAmount`/`grossAmount`/`vatAmount` jako liczby dziesiętne w złotych (np. 53.63), `currency`, `invoiceType` (np. `Vat`), `invoiceHash`, `formCode`.
+- Faktura jest widoczna z datą `PermanentStorage` po ok. 1 sekundzie od przyjęcia.
+- Specyfikacja OpenAPI do sprawdzania pól: `https://api-test.ksef.mf.gov.pl/docs/v2/openapi.json`.
+- Logowanie XAdES zbudowane bez bibliotek (`scripts/lib/ksef-test-auth.ts`): KSeF przyjął ręcznie złożony podpis XAdES-BES (RSA-SHA256, exc-c14n, `verifyCertificateChain=false`). To narzędzie tylko do testów – aplikacja go nie używa.
 
 ## Planowany układ plików
 

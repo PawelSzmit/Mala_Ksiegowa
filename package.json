@@ -4,11 +4,15 @@
   "private": true,
   "type": "module",
   "description": "Prosta księgowość jednoosobowej firmy: faktury z KSeF, KPiR, ZUS, zaliczka PIT",
-  "engines": { "node": ">=22.18" },
+  "engines": {
+    "node": ">=22.18"
+  },
   "scripts": {
     "test": "node --test \"test/*.test.ts\"",
     "typecheck": "tsc --noEmit",
-    "ksef:spike": "node scripts/ksef-spike.ts"
+    "ksef:spike": "node scripts/ksef-spike.ts",
+    "ksef:test-token": "node scripts/ksef-test-token.ts",
+    "ksef:test-invoice": "node scripts/ksef-test-invoice.ts"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

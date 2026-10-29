@@ -25,6 +25,7 @@ class FakeKsef {
   invoices: { ksefNumber: string; invoiceNumber: string; issueDate: string; grossAmount: number }[] = [];
   seen: { method: string; url: string; auth?: string; body?: any }[] = [];
   rateLimitOnce = false;
+  truncated = false;
 
   async start() {
     this.server = createServer((req, res) => void this.handle(req, res));
@@ -41,6 +42,7 @@ class FakeKsef {
     this.invoices = [];
     this.seen = [];
     this.rateLimitOnce = false;
+    this.truncated = false;
   }
 
   private json(res: ServerResponse, status: number, body: unknown) {
@@ -111,7 +113,7 @@ class FakeKsef {
       const offset = Number(url.searchParams.get('pageOffset'));
       const size = Number(url.searchParams.get('pageSize'));
       const slice = this.invoices.slice(offset * size, offset * size + size);
-      return this.json(res, 200, { hasMore: (offset + 1) * size < this.invoices.length, invoices: slice });
+      return this.json(res, 200, { hasMore: (offset + 1) * size < this.invoices.length, isTruncated: this.truncated, invoices: slice });
     }
     if (req.method === 'GET' && path.startsWith('/invoices/ksef/')) {
       res.writeHead(200, { 'content-type': 'application/xml' });
@@ -171,6 +173,14 @@ describe('klient KSeF', () => {
     const queries = fake.seen.filter((r) => r.url.startsWith('/v2/invoices/query/metadata'));
     assert.equal(queries.length, 3);
     assert.equal(queries[0]!.body.subjectType, 'Subject2');
+  });
+
+  it('ucięty wynik (isTruncated) daje błąd zamiast po cichu pominąć faktury', async () => {
+    fake.invoices = makeInvoices(1);
+    fake.truncated = true;
+    const client = newClient();
+    await client.authenticateWithToken(GOOD_TOKEN, NIP);
+    await assert.rejects(client.queryInvoiceMetadata({ from: new Date('2026-01-01') }), KsefError);
   });
 
   it('po wygaśnięciu tokenu dostępu odświeża go i ponawia zapytanie', async () => {

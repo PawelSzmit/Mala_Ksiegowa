@@ -132,7 +132,7 @@ export class KsefClient {
     const all: InvoiceMetadata[] = [];
 
     for (let pageOffset = 0; ; pageOffset += 1) {
-      const page = await this.authorized<{ hasMore?: boolean; invoices?: InvoiceMetadata[] }>(
+      const page = await this.authorized<{ hasMore?: boolean; isTruncated?: boolean; invoices?: InvoiceMetadata[] }>(
         'POST',
         `/invoices/query/metadata?sortOrder=Asc&pageOffset=${pageOffset}&pageSize=${pageSize}`,
         {
@@ -144,6 +144,8 @@ export class KsefClient {
           },
         },
       );
+      // isTruncated: KSeF uciął wynik (limit liczby faktur na jedno zapytanie) – trzeba zawęzić zakres dat.
+      if (page.isTruncated) throw new KsefError('Za dużo faktur w jednym zapytaniu – zawęź zakres dat', 422);
       all.push(...(page.invoices ?? []));
       if (!page.hasMore) return all;
     }
