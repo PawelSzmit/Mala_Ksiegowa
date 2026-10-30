@@ -104,7 +104,7 @@ Kolejność ma znaczenie: najpierw ryzyko (KSeF), potem reguły (żeby kwoty by�
 ### Etap 7. Wakacje składkowe (R10)
 - **Cel**: w ustawieniach roku zaznaczenie miesiąca wakacji; przypomnienie na ekranie głównym w miesiącu poprzedzającym („złóż wniosek RWS w eZUS do końca tego miesiąca”) z danymi do przepisania; uwzględnienie w obliczeniach (Etap 2) i w DRA (Etap 6).
 - **Ustalenie z rozeznania**: wniosek RWS (obecnie wersja 3.0, z polem „Wersja PKD”) składa się **wyłącznie elektronicznie w eZUS**; nie znaleziono możliwości importu pliku. Aplikacja nie generuje więc pliku RWS, tylko przypomina i podaje dane.
-- **Do potwierdzenia**: jak wygląda DRA w miesiącu wakacji (czy składa się DRA ze składką zdrowotną i jakie kody) – oficjalna instrukcja RWS / komunikat ZUS.
+- **Potwierdzone (2026-10-30)**: instrukcja ZUS o wakacjach składkowych – w miesiącu wakacji składa się DRA + RCA z kodem 05 14 00 (składki pokrywa budżet) + RCA z kodem 05 10 00 (zdrowotna); aplikacja tworzy je w jednym pliku KEDU.
 
 ### Etap 8. Wdrożenie na vh.pl
 - **Cel**: aplikacja działa pod subdomeną, z kopią zapasową i nocnym zadaniem.

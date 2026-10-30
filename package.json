@@ -4,14 +4,27 @@
   "private": true,
   "type": "module",
   "description": "Prosta księgowość jednoosobowej firmy: faktury z KSeF, KPiR, ZUS, zaliczka PIT",
-  "engines": { "node": ">=22.18" },
+  "engines": {
+    "node": ">=22.18"
+  },
   "scripts": {
-    "test": "node --test \"test/*.test.ts\"",
+    "test": "node --test --test-concurrency=1 \"test/**/*.test.ts\"",
     "typecheck": "tsc --noEmit",
-    "ksef:spike": "node scripts/ksef-spike.ts"
+    "ksef:spike": "node scripts/ksef-spike.ts",
+    "ksef:test-token": "node scripts/ksef-test-token.ts",
+    "ksef:test-invoice": "node scripts/ksef-test-invoice.ts",
+    "start": "node server.mjs",
+    "migrate": "node --env-file-if-exists=.env scripts/migrate.ts",
+    "create-user": "node --env-file-if-exists=.env scripts/create-user.ts",
+    "sync": "node --env-file-if-exists=.env scripts/ksef-sync.ts",
+    "package": "bash scripts/build-package.sh"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "@types/pg": "^8.23.1",
     "typescript": "^5.9.0"
+  },
+  "dependencies": {
+    "pg": "^8.23.1"
   }
 }

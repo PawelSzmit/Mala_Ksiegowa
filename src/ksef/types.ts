@@ -28,9 +28,14 @@ export interface KsefSession {
   refreshToken: TokenWithExpiry;
 }
 
-/** Podmiot faktury, jak w odpowiedzi /invoices/query/metadata. */
-export interface InvoiceParty {
-  nip?: string;
+/** Kształt pól potwierdzony na testowym KSeF 2026-10-29 (scripts/ksef-spike.ts). */
+export interface InvoiceSeller {
+  nip: string;
+  name?: string;
+}
+
+export interface InvoiceBuyer {
+  identifier: { type: string; value?: string }; // type: Nip, VatUe, Other, None
   name?: string;
 }
 
@@ -38,14 +43,18 @@ export interface InvoiceMetadata {
   ksefNumber: string;
   invoiceNumber: string;
   issueDate: string;
-  invoicingDate?: string;
-  permanentStorageDate?: string;
-  seller?: InvoiceParty;
-  buyer?: InvoiceParty;
-  netAmount?: number;
-  grossAmount?: number;
-  vatAmount?: number;
-  currency?: string;
+  invoicingDate: string;
+  acquisitionDate: string;
+  permanentStorageDate: string;
+  seller: InvoiceSeller;
+  buyer: InvoiceBuyer;
+  /** Kwoty w złotych jako liczby dziesiętne (np. 53.63) – do bazy zamieniamy na grosze. */
+  netAmount: number;
+  grossAmount: number;
+  vatAmount: number;
+  currency: string;
+  invoiceType?: string; // np. Vat, Kor, Zal
+  invoiceHash?: string;
 }
 
 export interface InvoiceQueryOptions {
@@ -54,6 +63,7 @@ export interface InvoiceQueryOptions {
   dateType?: 'Issue' | 'Invoicing' | 'PermanentStorage';
   from: Date;
   to?: Date;
+  /** Rozmiar strony: KSeF przyjmuje 10–250. */
   pageSize?: number;
 }
 

@@ -1,0 +1,161 @@
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import { attemptLogin, LOCK_MINUTES } from './auth/login.ts';
+import { createSession, deleteSession, findSessionUser, SESSION_COOKIE, SESSION_HOURS } from './auth/sessions.ts';
+import type { Db } from './db/pool.ts';
+import { HttpError, isSameOrigin, parseCookies, readForm, redirect, send, sessionCookie } from './http/http.ts';
+import { SCRIPT, STYLES } from './views/layout.ts';
+import { errorPage, loginPage, monthPage, type MonthEntry, type MonthView } from './views/pages.ts';
+import { currentMonth, warsawToday } from './dates.ts';
+import type { SyncOptions } from './jobs/ksef-sync.ts';
+import { LATE_INVOICE_LAST_DAY } from './rules/booking.ts';
+import { bookRoute } from './routes/book.ts';
+import { cashRoute } from './routes/cash.ts';
+import { loadSyncStatus, type Route, type RouteContext } from './routes/context.ts';
+import { costsRoute } from './routes/costs.ts';
+import { invoicesRoute } from './routes/invoices.ts';
+import { monthCloseRoute } from './routes/month-close.ts';
+import { pendingInvoicesFor, type SavedMonthResult } from './month/close.ts';
+import { loadHolidayMonths, rwsReminderFor } from './month/holiday.ts';
+import { settingsRoute } from './routes/settings.ts';
+
+export { currentMonth };
+
+const ROUTES: Route[] = [invoicesRoute, costsRoute, cashRoute, bookRoute, monthCloseRoute, settingsRoute];
+
+export interface AppDeps {
+  db: Db;
+  encryptionKey: Buffer;
+  cookieSecure: boolean;
+  /** Do testów: stały „teraz”. */
+  now?: () => number;
+  /** Do testów: udawany KSeF. */
+  syncOptions?: Pick<SyncOptions, 'createClient'>;
+}
+
+type User = { id: number; username: string };
+
+export function createApp(deps: AppDeps) {
+  const now = deps.now ?? Date.now;
+  const clearCookie = sessionCookie(SESSION_COOKIE, '', { secure: deps.cookieSecure, maxAgeSeconds: 0 });
+
+  async function monthView(year: number, month: number): Promise<MonthView> {
+    // Od 1. do 9. dnia: faktury za poprzedni miesiąc, które czekają na decyzję (trzeba je rozstrzygnąć przed zapłatą ZUS).
+    const today = warsawToday(now());
+    const prev = month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
+    const isCurrent = today.startsWith(`${year}-${String(month).padStart(2, '0')}`);
+    const [m, inv, cash, entries, sync, pendingPrevious, rws, holidays] = await Promise.all([
+      deps.db.query<{ status: 'open' | 'closed'; results: SavedMonthResult | null }>('SELECT status, results FROM months WHERE year = $1 AND month = $2', [year, month]),
+      deps.db.query<{ n: number }>("SELECT count(*)::int AS n FROM invoices WHERE status = 'to_review'"),
+      deps.db.query<{ amount: number; has_photo: boolean }>('SELECT amount, photo IS NOT NULL AS has_photo FROM cash_reports WHERE year = $1 AND month = $2', [year, month]),
+      deps.db.query<MonthEntry>(
+        `SELECT k.source, k.source_id, k.entry_date, k.document_number, k.counterparty, k.description, k.revenue, k.other_costs,
+                (k.source = 'manual_cost' AND mc.attachment IS NOT NULL) AS has_attachment
+         FROM kpir_entries k LEFT JOIN manual_costs mc ON k.source = 'manual_cost' AND mc.id = k.source_id
+         WHERE k.year = $1 AND k.month = $2 ORDER BY k.entry_date, k.id`,
+        [year, month],
+      ),
+      loadSyncStatus(deps.db),
+      isCurrent && Number(today.slice(8, 10)) <= LATE_INVOICE_LAST_DAY ? pendingInvoicesFor(deps.db, prev.year, prev.month) : 0,
+      rwsReminderFor(deps.db, year, month),
+      loadHolidayMonths(deps.db, [year]),
+    ]);
+    const c = cash.rows[0];
+    const status = m.rows[0]?.status ?? 'open';
+    return {
+      year, month, status, invoicesToReview: inv.rows[0]!.n,
+      cashReport: c ? { amount: c.amount, hasPhoto: c.has_photo } : null, entries: entries.rows, sync,
+      closed: status === 'closed' ? m.rows[0]!.results : null,
+      pendingPrevious: pendingPrevious ? { ...prev, count: pendingPrevious } : null,
+      rws, holiday: holidays.get(year) === month,
+    };
+  }
+
+  async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const url = new URL(req.url ?? '/', 'http://localhost');
+    const method = req.method ?? 'GET';
+    const cookies = parseCookies(req.headers.cookie);
+
+    if (method === 'POST' && !isSameOrigin(req)) throw new HttpError(403, 'Formularz wysłany z obcej strony.');
+
+    // --- strony bez logowania ---
+    if (url.pathname === '/static/app.css') return send(res, 200, STYLES, 'text/css; charset=utf-8');
+    if (url.pathname === '/static/app.js') return send(res, 200, SCRIPT, 'text/javascript; charset=utf-8');
+    if (url.pathname === '/zdrowie') {
+      // Sprawdzenie po wdrożeniu i dla monitoringu: aplikacja działa i ma połączenie z bazą.
+      try {
+        await deps.db.query('SELECT 1');
+        return send(res, 200, 'ok', 'text/plain; charset=utf-8');
+      } catch {
+        return send(res, 503, 'brak połączenia z bazą', 'text/plain; charset=utf-8');
+      }
+    }
+
+    if (url.pathname === '/logowanie') {
+      if (method === 'GET') return send(res, 200, loginPage().value);
+      if (method === 'POST') {
+        const form = await readForm(req);
+        const result = await attemptLogin(deps.db, deps.encryptionKey, {
+          username: form.get('username') ?? '',
+          password: form.get('password') ?? '',
+          code: form.get('code') ?? '',
+        }, now());
+        if (!result.ok) {
+          const message = result.reason === 'locked'
+            ? `Zbyt wiele nieudanych prób. Spróbuj ponownie za ${LOCK_MINUTES} minut.`
+            : 'Nieprawidłowy login, hasło lub kod z telefonu.';
+          return send(res, result.reason === 'locked' ? 429 : 401, loginPage(message).value);
+        }
+        await deleteSession(deps.db, cookies[SESSION_COOKIE]);
+        const sessionId = await createSession(deps.db, result.userId);
+        return redirect(res, '/', {
+          'Set-Cookie': sessionCookie(SESSION_COOKIE, sessionId, { secure: deps.cookieSecure, maxAgeSeconds: SESSION_HOURS * 3600 }),
+        });
+      }
+    }
+
+    // --- od tego miejsca wymagane zalogowanie ---
+    const user: User | null = await findSessionUser(deps.db, cookies[SESSION_COOKIE]);
+    if (!user) {
+      if (method === 'GET') return redirect(res, '/logowanie', cookies[SESSION_COOKIE] ? { 'Set-Cookie': clearCookie } : {});
+      throw new HttpError(401, 'Sesja wygasła – zaloguj się ponownie.');
+    }
+
+    if (url.pathname === '/wyloguj' && method === 'POST') {
+      await deleteSession(deps.db, cookies[SESSION_COOKIE]);
+      return redirect(res, '/logowanie', { 'Set-Cookie': clearCookie });
+    }
+
+    if (url.pathname === '/' && method === 'GET') {
+      const { year, month } = currentMonth(now());
+      return redirect(res, `/miesiac/${year}/${String(month).padStart(2, '0')}`);
+    }
+
+    const monthMatch = /^\/miesiac\/(\d{4})\/(\d{2})$/.exec(url.pathname);
+    if (monthMatch && method === 'GET') {
+      const year = Number(monthMatch[1]);
+      const month = Number(monthMatch[2]);
+      if (month < 1 || month > 12 || year < 2020 || year > 2100) throw new HttpError(404, 'Nie ma takiego miesiąca.');
+      return send(res, 200, monthPage(await monthView(year, month), user).value);
+    }
+
+    const ctx: RouteContext = { req, res, url, method, user, db: deps.db, encryptionKey: deps.encryptionKey, now, syncOptions: deps.syncOptions };
+    for (const handle of ROUTES) if (await handle(ctx)) return;
+
+    throw new HttpError(404, 'Nie ma takiej strony.');
+  }
+
+  return async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    try {
+      await route(req, res);
+    } catch (error) {
+      if (error instanceof HttpError) {
+        if (!res.headersSent) send(res, error.status, errorPage(error.status, error.message).value);
+        else res.end();
+        return;
+      }
+      console.error('Błąd aplikacji:', error);
+      if (!res.headersSent) send(res, 500, errorPage(500, 'Wystąpił nieoczekiwany błąd. Spróbuj ponownie.').value);
+      else res.end();
+    }
+  };
+}

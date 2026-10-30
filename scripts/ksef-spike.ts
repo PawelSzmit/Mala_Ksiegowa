@@ -27,7 +27,7 @@ try {
 
   const first = invoices[0];
   if (first) {
-    console.log(`Pierwsza: ${first.invoiceNumber} | ${first.seller?.name ?? '?'} | brutto ${first.grossAmount ?? '?'} ${first.currency ?? ''}`);
+    console.log(`Pierwsza: ${first.invoiceNumber} | ${first.seller.name ?? '?'} (NIP ${first.seller.nip}) | brutto ${first.grossAmount} ${first.currency}`);
     const xml = await client.getInvoiceXml(first.ksefNumber);
     console.log(`XML faktury pobrany (${xml.length} znaków), początek: ${xml.slice(0, 120).replace(/\s+/g, ' ')}`);
   } else {
