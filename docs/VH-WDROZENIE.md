@@ -29,7 +29,7 @@ Strona `za-horyzont.pl` i aplikacja gabinetu się przy tym nie zmieniają.
 
 1. Otwórz **„Kreator baz danych PostgreSQL”**.
 2. Utwórz bazę `ksiegowa`. cPanel doda prefiks, więc pełna nazwa to np. `vh20129_ksiegowa`.
-3. Utwórz osobnego użytkownika `ksiegowa` (np. `vh20129_ksiegowa`). Hasło wygeneruj przyciskiem „Generator haseł” i zapisz w menedżerze haseł.
+3. Utwórz osobnego użytkownika `ksiegowa_app` (np. `vh20129_ksiegowa_app`; cPanel nie pozwala nazwać go tak samo jak bazę). Hasło wygeneruj przyciskiem „Generator haseł” i zapisz w menedżerze haseł.
 4. Przypisz użytkownika do tej bazy z **wszystkimi prawami**, tylko do tej jednej bazy.
 5. Zapisz w menedżerze haseł pełną nazwę bazy, pełną nazwę użytkownika i hasło.
 
@@ -70,7 +70,7 @@ bash ~/mala-ksiegowa-app/scripts/setup-vh.sh
 
 Skrypt robi kolejno:
 - instaluje zależności;
-- tworzy użytkownika bazy z losowym hasłem i nadaje mu prawa do bazy `vh20129_ksiegowa`;
+- tworzy użytkownika bazy `vh20129_ksiegowa_app` z losowym hasłem i nadaje mu prawa do bazy `vh20129_ksiegowa`;
 - zapisuje plik `.env` z losowym kluczem;
 - tworzy tabele;
 - zakłada Twoje konto.
@@ -95,9 +95,9 @@ W Terminalu, w katalogu aplikacji (po poleceniu z kroku 4.4), wykonaj kolejno:
    ```
    umask 077 && printf 'APP_ENCRYPTION_KEY=%s\n' "$(openssl rand -base64 32)" > .env
    ```
-2. Połączenie z bazą. Polecenie zapyta o hasło do bazy (z kroku 2), a wpisywanie nie będzie widoczne. Jeśli nazwy bazy lub użytkownika są inne niż `vh20129_ksiegowa`, popraw je w poleceniu:
+2. Połączenie z bazą. Polecenie zapyta o hasło do bazy (z kroku 2), a wpisywanie nie będzie widoczne. Jeśli nazwy są inne niż baza `vh20129_ksiegowa` i użytkownik `vh20129_ksiegowa_app`, popraw je w poleceniu:
    ```
-   read -rs -p "Hasło bazy: " P && echo && P="$P" node -e 'console.log("DATABASE_URL=postgres://vh20129_ksiegowa:" + encodeURIComponent(process.env.P) + "@localhost:5432/vh20129_ksiegowa")' >> .env && unset P
+   read -rs -p "Hasło bazy: " P && echo && P="$P" node -e 'console.log("DATABASE_URL=postgres://vh20129_ksiegowa_app:" + encodeURIComponent(process.env.P) + "@localhost:5432/vh20129_ksiegowa")' >> .env && unset P
    ```
 3. Sprawdź, że w pliku są dwie nazwy. Pokażą się same nazwy, bez wartości:
    ```

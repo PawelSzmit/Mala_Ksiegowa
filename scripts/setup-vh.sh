@@ -10,7 +10,8 @@ APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 APP_NAME="$(basename "$APP_DIR")"
 ACCOUNT="$(whoami)"
 DB="${ACCOUNT}_ksiegowa"
-DB_USER="$DB"
+# cPanel nie pozwala nazwać użytkownika tak samo jak bazę.
+DB_USER="${ACCOUNT}_ksiegowa_app"
 LOGIN="${1:-pawel}"
 
 step() { printf '\n== %s\n' "$1"; }
