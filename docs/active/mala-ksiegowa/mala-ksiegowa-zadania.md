@@ -161,14 +161,15 @@ Raport: `docs/active/mala-ksiegowa/review-faza-7.md`. Decyzja: gotowe do dalszej
 - [x] P3-5: łamanie „Rok 2026” na telefonie; test przypomnienia bez pliku ustawień roku (Claude)
 
 ## Etap 8. Wdrożenie na vh.pl
-- [ ] Zapytać Pawła o nazwę subdomeny (Claude → Paweł) – propozycja `ksiegowa.za-horyzont.pl` (domena jest na koncie jako addon), zapytany 2026-10-30
+- [x] Zapytać Pawła o nazwę subdomeny – zatwierdzona `ksiegowa.za-horyzont.pl` (2026-10-30)
 - [x] `docs/KSEF-TOKEN.md`: jak wygenerować token tylko do odczytu po zalogowaniu Profilem Zaufanym (Claude) – **token trzeba wygenerować do 31.12.2026** (Aplikacja Podatnika generuje tokeny do końca 2026; token ważny do unieważnienia)
 - [x] `docs/VH-WDROZENIE.md`: instrukcja krok po kroku na wzór instrukcji gabinetu (Claude) – przećwiczona lokalnie na rozpakowanej paczce (npm ci, .env, migracje, /zdrowie, cron)
 - [x] `scripts/build-package.sh`: paczka `tar.gz` (Claude) – `npm run package`
-- [ ] Subdomena + SSL, baza PostgreSQL z osobnym użytkownikiem (Paweł lub Claude za zgodą)
-- [ ] Wgranie paczki, aplikacja Node 24 w cPanelu, zmienne środowiskowe, migracje, pierwsze konto (Paweł lub Claude za zgodą)
+- [x] Subdomena + SSL (AutoSSL), baza `vh20129_ksiegowa`, użytkownik `vh20129_ksiegowa_app` (Claude za zgodą Pawła + skrypt setup-vh, 2026-10-30)
+- [x] Kod przez cPanel Git (gałąź `claude/project-thread-eptw6o`), aplikacja Node 24.22.1 Production, `.env`, migracje, konto `pawel` (2026-10-30; `/zdrowie` = ok, strona logowania działa)
+- [ ] Paweł loguje się pierwszy raz i uzupełnia Ustawienia (krok 10 VH-WDROZENIE) – przy okazji potwierdza sprawdzenie Origin/Host (review3 P3-3)
 - [ ] Wygenerowanie prawdziwego tokenu KSeF i wpisanie go w aplikacji (Paweł)
-- [ ] Zadanie cron raz dziennie (Paweł lub Claude za zgodą)
-- [ ] Sprawdzić, że JetBackup obejmuje bazę i katalog aplikacji (Claude)
+- [x] Zadanie cron codziennie 6:15 (`ksef-sync.ts`, log w `~/mala-ksiegowa-logs/ksef-sync.log`; do czasu tokenu loguje „pominięto”)
+- [x] JetBackup 5: codzienne kopie baz PostgreSQL (15 kopii) i katalogu domowego – nowa baza wejdzie do kopii od najbliższej nocy
 - [ ] Pierwsze zamknięcie prawdziwego miesiąca razem z Pawłem (Paweł)
 - [ ] Ryzyko po 2026: gdyby token przestał działać (unieważnienie, wyciek), nowego może nie dać się wygenerować – wtedy uwierzytelnianie certyfikatem KSeF (XAdES, mamy próbę z etapu 1) (Claude, w razie potrzeby)
