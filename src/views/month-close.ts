@@ -72,7 +72,7 @@ ${v.previous ? differences(v, v.previous) : ''}
 <div class="card">
   <form method="post" action="${base}/zamknij">
     ${v.ksefProblem ? html`<p class="warning">${v.ksefProblem}</p>
-    <label><input type="checkbox" name="ksef_ok" value="tak" required> Sprawdziłem – wszystkie faktury za ten miesiąc są w księdze, zamykam mimo to</label>` : ''}
+    <label><input type="checkbox" name="ksef_ok" value="tak" required> Sprawdziłam – wszystkie faktury za ten miesiąc są w księdze, zamykam mimo to</label>` : ''}
     <button type="submit" ${v.blockers.length ? html`disabled` : ''}>Zamknij miesiąc</button>
   </form>
   <p class="hint">Po zamknięciu pobierzesz plik DRA do eZUS. <a href="${monthHref(v.year, v.month)}">← wróć do miesiąca</a></p>
