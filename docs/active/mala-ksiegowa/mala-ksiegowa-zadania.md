@@ -148,8 +148,17 @@ Raport: `docs/active/mala-ksiegowa/review-faza-6.md`. Decyzja: można iść dale
 - [x] Zaznaczanie miesiąca wakacji w ustawieniach roku (Claude) → Ustawienia → „Wakacje składkowe”
 - [x] Przypomnienie w miesiącu poprzedzającym + dane do wniosku RWS (Claude)
 - [x] Plik dla eZUS w miesiącu wakacji (DRA + 2×RCA) i testy (Claude)
-- [ ] Zapytać Pawła o miesiąc wakacji w 2027 (Claude → Paweł) – zapytany 2026-10-30; Paweł może też sam ustawić w aplikacji
+- [x] Zapytać Pawła o miesiąc wakacji w 2027 (Claude → Paweł) → nie wie; wpisze sam w Ustawieniach, kiedy zdecyduje (2026-10-30)
 - [ ] Przy pierwszym miesiącu wakacji: import pliku z trzema dokumentami w eZUS jako roboczych, bez błędów krytycznych (Paweł)
+
+## Do poprawy po review fazy 7
+Raport: `docs/active/mala-ksiegowa/review-faza-7.md`. Decyzja: gotowe do dalszej pracy (0×P1, 1×P2 poprawione, 5×P3).
+- [x] P2-1: wakacje do wpisania w każdej chwili (po terminie RWS tylko ostrzeżenie), także na poprzedni rok + test (Claude, 2026-10-30)
+- [ ] P3-1: import pliku miesiąca wakacji (DRA + 2×RCA) w eZUS przy pierwszych wakacjach (Paweł) – ten sam punkt co w etapie 7
+- [ ] P3-2: `closeMonth` czyta wiersz `years` z `FOR SHARE` (zamknięcie nie minie się ze zmianą wakacji) (Claude, opcjonalnie)
+- [ ] P3-3: nazwa pliku `ZUS-RRRR-MM.xml` zamiast `DRA-…` (Claude, kosmetyka)
+- [ ] P3-4: Paweł pamięta o RWS sam, gdy nie zagląda do aplikacji w miesiącu przed wakacjami (bez powiadomień – świadomie)
+- [ ] P3-5: łamanie „Rok 2026” na telefonie; test przypomnienia bez pliku ustawień roku (Claude)
 
 ## Etap 8. Wdrożenie na vh.pl
 - [ ] Zapytać Pawła o nazwę subdomeny (Claude → Paweł)

@@ -128,12 +128,13 @@ export interface HolidayYear {
 
 const HOLIDAY_MONTHS = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
 
-function holidayCard(years: HolidayYear[], error?: string, saved?: boolean): Html {
+function holidayCard(years: HolidayYear[], error?: string, saved?: boolean, notice?: string): Html {
   return html`<div class="card" id="wakacje">
   <h1>Wakacje składkowe</h1>
   ${errorBox(error)}
   ${saved ? html`<p class="notice" role="status">Zapisano.</p>` : ''}
-  <p class="hint">Raz w roku możesz nie płacić składek społecznych i Funduszu Pracy za wybrany miesiąc (zdrowotną płacisz). Wniosek RWS składasz w eZUS w miesiącu przed wakacjami – aplikacja przypomni o nim na stronie tamtego miesiąca.</p>
+  ${notice ? html`<p class="warning" role="alert">${notice}</p>` : ''}
+  <p class="hint">Raz w roku możesz nie płacić składek społecznych i Funduszu Pracy za wybrany miesiąc (zdrowotną płacisz). Miesiąc wpisujesz tu w dowolnej chwili, gdy już wiesz. Wniosek RWS składasz w eZUS w miesiącu przed wakacjami – aplikacja przypomni o nim na stronie tamtego miesiąca.</p>
   ${years.map((y) => html`<form method="post" action="/ustawienia/wakacje" class="row">
     <input type="hidden" name="year" value="${String(y.year)}">
     <label for="holiday-${String(y.year)}">Rok ${String(y.year)}</label>
@@ -143,14 +144,14 @@ function holidayCard(years: HolidayYear[], error?: string, saved?: boolean): Htm
     </select>
     <button type="submit" class="secondary">Zapisz</button>
   </form>`)}
-  <p class="hint">Zmiana jest możliwa, dopóki miesiąc wakacji i późniejsze miesiące nie są zamknięte.</p>
+  <p class="hint">Zmienić albo usunąć wakacje możesz zawsze; jeśli miesiąc wakacji lub późniejszy jest już zamknięty, aplikacja poprosi najpierw o jego ponowne otwarcie (kwoty się przeliczą).</p>
 </div>`;
 }
 
 export function settingsPage(p: {
   user: LayoutUser; values: SettingsValues; error?: string; saved?: boolean;
   payer: PayerValues; payerError?: string; payerSaved?: boolean;
-  holidays: HolidayYear[]; holidayError?: string; holidaySaved?: boolean;
+  holidays: HolidayYear[]; holidayError?: string; holidaySaved?: boolean; holidayNotice?: string;
 }): Html {
   const v = p.values;
   const env = (value: string, label: string) => html`<option value="${value}" ${v.ksef_env === value ? html`selected` : ''}>${label}</option>`;
@@ -175,7 +176,7 @@ export function settingsPage(p: {
   </form>
 </div>
 ${payerCard(p.payer, p.payerError, p.payerSaved)}
-${holidayCard(p.holidays, p.holidayError, p.holidaySaved)}`,
+${holidayCard(p.holidays, p.holidayError, p.holidaySaved, p.holidayNotice)}`,
     p.user,
     'ustawienia',
   );

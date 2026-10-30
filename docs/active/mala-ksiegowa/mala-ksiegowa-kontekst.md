@@ -2,7 +2,7 @@
 
 Gałąź: `claude/project-thread-eptw6o` (kontynuacja `claude/project-thread-tqtl79`)
 Ostatnia aktualizacja: 2026-10-30
-Stan: Etapy 1–7 gotowe (KSeF, reguły, logowanie, faktury/koszty/kasa, księga KPiR, zamknięcie miesiąca z DRA, wakacje składkowe). Start księgi: 1.01.2027 (decyzja Pawła 2026-10-30). Czeka: import DRA w eZUS przez Pawła po wdrożeniu; miesiąc wakacji w 2027 (pytanie do Pawła). Następny: poprawki P2 z review 6, potem etap 8 (wdrożenie).
+Stan: Etapy 1–7 gotowe (KSeF, reguły, logowanie, faktury/koszty/kasa, księga KPiR, zamknięcie miesiąca z DRA, wakacje składkowe). Start księgi: 1.01.2027 (decyzja Pawła 2026-10-30). Czeka: import DRA w eZUS przez Pawła po wdrożeniu. Miesiąc wakacji 2027: Paweł jeszcze nie wie – wpisze sam w Ustawieniach. Następny: poprawki P2 z review 6, potem etap 8 (wdrożenie).
 
 ## Kim jest użytkownik
 
@@ -200,13 +200,14 @@ Decyzje:
   - ZUS DRA: IV p1–p3 i p10–p12, p20/p21 i p29/p30 (chorobowe p19/p28 tylko przy dobrowolnym), p37 = 0; VI zdrowotna; IX p2 = zdrowotna; bez VII (zwolnienia z FP przy opłacaniu tylko za siebie się nie wykazuje) i bez X/XI.
   - Gdy dokumentów nie ma, ZUS tworzy je z urzędu z minimalną zdrowotną – ale to nie zwalnia z ich wysłania.
 - **W aplikacji**:
-  - Ustawienia → „Wakacje składkowe” (`/ustawienia/wakacje`): miesiąc na bieżący i następny rok (`years.holiday_month`); nowy miesiąc tylko, gdy termin RWS (miesiąc wcześniej) nie minął; zmiana zablokowana, gdy zamknięty jest miesiąc ≥ min(stary, nowy) – przy grudniu także styczeń następnego roku (`src/month/holiday.ts`).
+  - Ustawienia → „Wakacje składkowe” (`/ustawienia/wakacje`): miesiąc na poprzedni, bieżący i następny rok (`years.holiday_month`), wpisywany w każdej chwili (po terminie RWS – ostrzeżenie); zmiana zablokowana, gdy zamknięty jest miesiąc ≥ min(stary, nowy) – przy grudniu także styczeń następnego roku (`src/month/holiday.ts`).
   - Strona miesiąca przed wakacjami: karta „Złóż wniosek RWS do …” z kwotą zwolnienia i danymi do przepisania (NIP, PESEL, REGON, nazwisko, miesiąc); RWS składa się tylko w eZUS (nie ma importu). Strona miesiąca wakacji: uwaga, że zwolnienie działa tylko po przyjęciu RWS.
   - Zamknięcie miesiąca wakacji zapisuje `exemptSocial` (składki objęte zwolnieniem); plik `dra.xml` buduje wtedy DRA + 2×RCA (`buildDraKedu` z `exempt`). Miesiąc wakacji zamknięty przed tą zmianą wymaga ponownego zamknięcia.
   - Następny miesiąc: nic nie zapłacono za miesiąc wakacji, więc brak wpisu FP i odliczenia składek (już w regułach z etapu 2).
 - **Grudzień 2026**: Paweł nie bierze wakacji (2026-10-30) – review 6 P3-3 zamknięte.
 - Testy: `test/zus/dra.test.ts` (+3: przykład 1 z instrukcji ZUS co do grosza, bez chorobowego, błędne dane), `test/holiday.test.ts` (4 scenariusze przez HTTP). 131 z bazą, 87 bez; typecheck czysty; ekrany obejrzane w przeglądarce (szerokość telefonu).
 - **Do sprawdzenia przy imporcie w eZUS**: plik z trzema dokumentami (ten sam punkt kontrolny co zwykły DRA, gdy przyjdzie miesiąc wakacji).
+- **Review etapu 7 (2026-10-30)**: gotowe do dalszej pracy (0×P1, 1×P2 poprawione od razu, 5×P3), raport `review-faza-7.md`. Na prośbę Pawła wakacje wpisuje się w każdej chwili (poprzedni, bieżący, następny rok); po terminie RWS tylko ostrzeżenie, blokada wyłącznie przy zamkniętych miesiącach (trzeba je otworzyć).
 
 ## Planowany układ plików
 

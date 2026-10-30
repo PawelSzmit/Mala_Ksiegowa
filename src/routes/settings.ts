@@ -30,12 +30,15 @@ type PageExtras = Partial<Omit<Parameters<typeof settingsPage>[0], 'user' | 'hol
 /** Strona ustawień z aktualnymi danymi z bazy; `extras` nadpisuje wartości formularza i dodaje komunikaty. */
 async function render(ctx: RouteContext, status: number, extras: PageExtras = {}) {
   const year = Number(warsawToday(ctx.now()).slice(0, 4));
-  const holidays = await loadHolidayMonths(ctx.db, [year, year + 1]);
+  const holidays = await loadHolidayMonths(ctx.db, holidayYears(year));
   send(ctx.res, status, settingsPage({
     user: ctx.user, values: extras.values ?? await load(ctx), payer: extras.payer ?? await loadPayer(ctx),
     ...extras, holidays: [...holidays].map(([y, month]) => ({ year: y, month })),
   }).value);
 }
+
+/** Lata, w których można wpisać wakacje: poprzedni (np. grudzień wpisany w styczniu), bieżący i następny. */
+const holidayYears = (current: number) => [current - 1, current, current + 1];
 
 async function saveHoliday(ctx: RouteContext) {
   const form = await readForm(ctx.req);
@@ -43,20 +46,21 @@ async function saveHoliday(ctx: RouteContext) {
   const year = Number(form.get('year'));
   const rawMonth = form.get('month') ?? '';
   try {
-    if (year !== current && year !== current + 1) throw new HttpError(400, `Wakacje można ustawić na rok ${current} albo ${current + 1}`);
+    if (!holidayYears(current).includes(year)) throw new HttpError(400, `Wakacje można wpisać na lata ${holidayYears(current).join(', ')}`);
     const month = rawMonth === '' ? null : Number(rawMonth);
     if (month !== null && !(Number.isInteger(month) && month >= 1 && month <= 12)) throw new HttpError(400, 'Wybierz miesiąc z listy');
+    // Wpisać można w każdej chwili (np. RWS złożony w eZUS, a w aplikacji wpisany później). Gdy termin wniosku minął,
+    // tylko przypominamy – aplikacja nie wie, czy wniosek został złożony.
+    let notice: string | undefined;
     const saved = (await loadHolidayMonths(ctx.db, [year])).get(year);
     if (month !== null && month !== saved) {
-      // Wniosek RWS składa się w miesiącu przed wakacjami – na miesiąc, którego termin minął, ZUS zwolnienia nie da.
       const rws = rwsApplicationMonth(year, month);
-      const today = warsawToday(ctx.now());
-      if (`${rws.year}-${String(rws.month).padStart(2, '0')}` < today.slice(0, 7)) {
-        throw new HttpError(400, `Na ${monthName(month)} ${year} jest już za późno: wniosek RWS trzeba było złożyć w miesiącu przed wakacjami (${String(rws.month).padStart(2, '0')}/${rws.year}).`);
+      if (`${rws.year}-${String(rws.month).padStart(2, '0')}` < warsawToday(ctx.now()).slice(0, 7)) {
+        notice = `Termin wniosku RWS za ${monthName(month)} ${year} już minął (składa się go w miesiącu przed wakacjami: ${String(rws.month).padStart(2, '0')}/${rws.year}). Zostaw wakacje tylko, jeśli wniosek złożyłeś i ZUS go przyjął – inaczej składki trzeba zapłacić normalnie.`;
       }
     }
     await saveHolidayMonth(ctx.db, year, month);
-    await render(ctx, 200, { holidaySaved: true });
+    await render(ctx, 200, { holidaySaved: true, ...(notice ? { holidayNotice: notice } : {}) });
   } catch (error) {
     if (!(error instanceof HttpError)) throw error;
     await render(ctx, error.status, { holidayError: error.message });

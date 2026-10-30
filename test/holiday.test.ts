@@ -63,30 +63,38 @@ describe('wakacje składkowe', { skip: skipWithoutDb }, () => {
   const setHoliday = (year: number, month: number | null) => post('/ustawienia/wakacje', { year: String(year), month: month === null ? '' : String(month) });
   const holidayInDb = (year: number, month: number) => db.query('INSERT INTO years (year, holiday_month) VALUES ($1, $2)', [year, month]);
 
-  it('ustawienia: wybór miesiąca na bieżący i następny rok; za późno, gdy termin RWS minął; inny rok odrzucony', async () => {
+  it('ustawienia: miesiąc wpisany w dowolnej chwili na poprzedni, bieżący i następny rok; po terminie RWS tylko ostrzeżenie', async () => {
     let page = await (await get('/ustawienia')).text();
     assert.match(page, /Wakacje składkowe/);
-    assert.match(page, /Rok 2026[\s\S]*Rok 2027/);
+    assert.match(page, /Rok 2025[\s\S]*Rok 2026[\s\S]*Rok 2027/);
 
     let res = await setHoliday(2026, 12); // RWS w listopadzie – czyli teraz
     assert.equal(res.status, 200);
-    assert.match(await res.text(), /Zapisano/);
-    res = await setHoliday(2026, 11); // RWS trzeba było złożyć w październiku
-    assert.equal(res.status, 400);
-    assert.match(await res.text(), /Na listopad 2026 jest już za późno/);
+    page = await res.text();
+    assert.match(page, /Zapisano/);
+    assert.doesNotMatch(page, /Termin wniosku RWS/);
+    // Termin RWS minął (październik) – zapis przechodzi, ale z ostrzeżeniem.
+    res = await setHoliday(2026, 11);
+    assert.equal(res.status, 200);
+    assert.match(await res.text(), /Termin wniosku RWS za listopad 2026 już minął \(składa się go w miesiącu przed wakacjami: 10\/2026\)/);
     res = await setHoliday(2027, 3);
     assert.equal(res.status, 200);
-    res = await setHoliday(2025, 5);
+    assert.equal((await setHoliday(2025, 12)).status, 200);
+    res = await setHoliday(2024, 5);
+    assert.equal(res.status, 400);
+    res = await post('/ustawienia/wakacje', { year: '2027', month: '13' });
     assert.equal(res.status, 400);
 
     const { rows } = await db.query('SELECT year, holiday_month FROM years ORDER BY year');
-    assert.deepEqual(rows, [{ year: 2026, holiday_month: 12 }, { year: 2027, holiday_month: 3 }]);
+    assert.deepEqual(rows, [{ year: 2025, holiday_month: 12 }, { year: 2026, holiday_month: 11 }, { year: 2027, holiday_month: 3 }]);
     page = await (await get('/ustawienia')).text();
-    assert.match(page, /<option value="12" selected>grudzień/);
+    assert.match(page, /<option value="11" selected>listopad/);
     assert.match(page, /<option value="3" selected>marzec/);
 
-    // Usunięcie wakacji („bez wakacji”).
-    assert.equal((await setHoliday(2027, null)).status, 200);
+    // Usunięcie wakacji („bez wakacji”) – bez ostrzeżeń.
+    res = await setHoliday(2027, null);
+    assert.equal(res.status, 200);
+    assert.doesNotMatch(await res.text(), /Termin wniosku RWS/);
     assert.equal((await db.query('SELECT holiday_month FROM years WHERE year = 2027')).rows[0].holiday_month, null);
   });
 
