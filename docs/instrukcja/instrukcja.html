@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Mała Księgowa – instrukcja</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm 16mm 15mm; }
+  :root { --ink:#1d2433; --muted:#5b6475; --line:#d9dee7; --accent:#1f5fae; --accent-soft:#e8f0fb; --warn:#9a5b00; --warn-soft:#fff4e0; --ok:#1e7a46; --ok-soft:#e6f5ec; }
+  * { box-sizing: border-box; }
+  body { font-family: Inter, "DejaVu Sans", sans-serif; color: var(--ink); font-size: 10.5pt; line-height: 1.5; margin: 0; }
+  h1 { font-size: 22pt; margin: 0 0 2mm; letter-spacing: -0.02em; }
+  h2 { font-size: 14pt; margin: 7mm 0 2.5mm; color: var(--accent); break-after: avoid; }
+  h3 { font-size: 11pt; margin: 4mm 0 1.5mm; break-after: avoid; }
+  p { margin: 0 0 2.5mm; }
+  .lead { color: var(--muted); font-size: 11pt; margin-bottom: 5mm; }
+  .box { border: 1px solid var(--line); border-radius: 3mm; padding: 3.5mm 4.5mm; margin: 3mm 0; break-inside: avoid; }
+  .tip { background: var(--accent-soft); border-color: #c5d8f2; }
+  .warn { background: var(--warn-soft); border-color: #f0d6a8; }
+  .ok { background: var(--ok-soft); border-color: #bfe3cc; }
+  .box p:last-child, .box ul:last-child, .box ol:last-child { margin-bottom: 0; }
+  ol.steps { list-style: none; padding: 0; margin: 2mm 0; counter-reset: s; }
+  ol.steps > li { counter-increment: s; position: relative; padding: 0 0 2.5mm 10mm; break-inside: avoid; }
+  ol.steps > li::before { content: counter(s); position: absolute; left: 0; top: 0.2mm; width: 6.5mm; height: 6.5mm; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; font-size: 9pt; text-align: center; line-height: 6.5mm; }
+  ul { margin: 1mm 0 2.5mm; padding-left: 5mm; }
+  li { margin-bottom: 1mm; }
+  .btn { display: inline-block; border: 1px solid var(--accent); color: var(--accent); border-radius: 1.5mm; padding: 0 1.8mm; font-weight: 600; font-size: 9.5pt; white-space: nowrap; }
+  .tab { font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; margin: 2mm 0 3mm; font-size: 10pt; break-inside: avoid; }
+  th, td { text-align: left; padding: 1.8mm 2.5mm; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: #f4f6fa; font-weight: 600; }
+  .figure { margin: 3mm 0 4mm; break-inside: avoid; }
+  .figure svg { width: 100%; height: auto; display: block; }
+  .caption { color: var(--muted); font-size: 9pt; margin-top: 1mm; }
+  .page-break { break-before: page; }
+  .small { font-size: 9pt; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<h1>Mała Księgowa – instrukcja</h1>
+<p class="lead">Krótko i po kolei: co robisz w ciągu miesiąca, jak zamknąć miesiąc i jak wysłać deklarację do ZUS. Adres aplikacji: <strong>https://ksiegowa.za-horyzont.pl</strong></p>
+
+<h2>Jak to działa w skrócie</h2>
+<p>Aplikacja to Twoja książka przychodów i rozchodów. Do książki trafiają faktury kosztowe i raport z kasy. Na koniec miesiąca aplikacja liczy, ile zapłacić ZUS i ile zaliczki na podatek. Przygotowuje też plik z deklaracją do ZUS. Ten plik sama wgrywasz w eZUS, bo aplikacja niczego nie wysyła za Ciebie.</p>
+
+<div class="figure">
+<svg viewBox="0 0 760 210" xmlns="http://www.w3.org/2000/svg" font-family="Inter, DejaVu Sans, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f5fae"/></marker>
+  </defs>
+  <!-- źródła -->
+  <rect x="10" y="10" width="170" height="52" rx="10" fill="#e8f0fb" stroke="#c5d8f2"/>
+  <text x="95" y="32" text-anchor="middle" font-size="13" font-weight="700" fill="#1d2433">Faktury z KSeF</text>
+  <text x="95" y="50" text-anchor="middle" font-size="11" fill="#5b6475">pobierane same, codziennie</text>
+  <rect x="10" y="79" width="170" height="52" rx="10" fill="#e8f0fb" stroke="#c5d8f2"/>
+  <text x="95" y="101" text-anchor="middle" font-size="13" font-weight="700" fill="#1d2433">Koszty spoza KSeF</text>
+  <text x="95" y="119" text-anchor="middle" font-size="11" fill="#5b6475">np. paragon, rachunek</text>
+  <rect x="10" y="148" width="170" height="52" rx="10" fill="#e8f0fb" stroke="#c5d8f2"/>
+  <text x="95" y="170" text-anchor="middle" font-size="13" font-weight="700" fill="#1d2433">Raport z kasy</text>
+  <text x="95" y="188" text-anchor="middle" font-size="11" fill="#5b6475">przychód, raz w miesiącu</text>
+  <!-- strzałki do księgi -->
+  <path d="M180,36 C220,36 220,100 262,100" fill="none" stroke="#1f5fae" stroke-width="2" marker-end="url(#a)"/>
+  <path d="M180,105 L262,105" fill="none" stroke="#1f5fae" stroke-width="2" marker-end="url(#a)"/>
+  <path d="M180,174 C220,174 220,110 262,110" fill="none" stroke="#1f5fae" stroke-width="2" marker-end="url(#a)"/>
+  <!-- księga -->
+  <rect x="265" y="70" width="150" height="70" rx="10" fill="#ffffff" stroke="#1f5fae" stroke-width="2"/>
+  <text x="340" y="100" text-anchor="middle" font-size="14" font-weight="700" fill="#1d2433">Księga</text>
+  <text x="340" y="119" text-anchor="middle" font-size="11" fill="#5b6475">(KPiR)</text>
+  <path d="M415,105 L470,105" fill="none" stroke="#1f5fae" stroke-width="2" marker-end="url(#a)"/>
+  <!-- zamknięcie -->
+  <rect x="473" y="70" width="130" height="70" rx="10" fill="#1f5fae"/>
+  <text x="538" y="100" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">Zamknięcie</text>
+  <text x="538" y="118" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">miesiąca</text>
+  <!-- wyniki -->
+  <path d="M603,92 C630,92 630,40 652,40" fill="none" stroke="#1f5fae" stroke-width="2" marker-end="url(#a)"/>
+  <path d="M603,105 L652,105" fill="none" stroke="#1f5fae" stroke-width="2" marker-end="url(#a)"/>
+  <path d="M603,118 C630,118 630,170 652,170" fill="none" stroke="#1f5fae" stroke-width="2" marker-end="url(#a)"/>
+  <rect x="655" y="17" width="98" height="46" rx="8" fill="#e6f5ec" stroke="#bfe3cc"/>
+  <text x="704" y="37" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d2433">Kwota ZUS</text>
+  <text x="704" y="53" text-anchor="middle" font-size="10.5" fill="#5b6475">do 10.</text>
+  <rect x="655" y="82" width="98" height="46" rx="8" fill="#e6f5ec" stroke="#bfe3cc"/>
+  <text x="704" y="102" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d2433">Zaliczka PIT</text>
+  <text x="704" y="118" text-anchor="middle" font-size="10.5" fill="#5b6475">do 20.</text>
+  <rect x="655" y="147" width="98" height="46" rx="8" fill="#e6f5ec" stroke="#bfe3cc"/>
+  <text x="704" y="167" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d2433">Plik DRA</text>
+  <text x="704" y="183" text-anchor="middle" font-size="10.5" fill="#5b6475">do eZUS</text>
+</svg>
+<div class="caption">Skąd biorą się dane i co powstaje po zamknięciu miesiąca.</div>
+</div>
+
+<h2>Menu aplikacji</h2>
+<table>
+  <tr><th style="width:24%">Zakładka</th><th>Do czego służy</th></tr>
+  <tr><td class="tab">Miesiąc</td><td>Przychód i koszty bieżącego miesiąca, raport z kasy, koszty spoza KSeF, przycisk zamknięcia, po zamknięciu kwoty do zapłaty i plik DRA. Strzałkami przechodzisz między miesiącami.</td></tr>
+  <tr><td class="tab">Faktury</td><td>Faktury pobrane z KSeF. Przy każdej nowej decydujesz, czy to koszt firmy.</td></tr>
+  <tr><td class="tab">Księga</td><td>Twoja książka przychodów i rozchodów, gotowa do wydruku.</td></tr>
+  <tr><td class="tab">Ustawienia</td><td>Dane firmy i do ZUS, token KSeF, miesiąc wakacji składkowych.</td></tr>
+</table>
+
+<h2>W ciągu miesiąca</h2>
+<ol class="steps">
+  <li><strong>Faktury kosztowe.</strong> Aplikacja co rano (ok. 6:15) pobiera z KSeF nowe faktury wystawione na Ciebie. Wejdź w <span class="tab">Faktury</span>. W sekcji „Do przejrzenia” kliknij przy każdej <span class="btn">Koszt firmy</span> albo <span class="btn">Nie jest kosztem</span>. Pomyłkę poprawisz przyciskiem „Cofnij decyzję”. Chcesz sprawdzić od razu? Kliknij <span class="btn">Sprawdź teraz</span>.</li>
+  <li><strong>Koszt bez faktury w KSeF</strong> (np. paragon, rachunek z zagranicy). W <span class="tab">Miesiąc</span> kliknij <span class="btn">Dodaj koszt spoza KSeF</span> i wpisz dane z dokumentu.</li>
+  <li><strong>Raport z kasy.</strong> Po końcu miesiąca w <span class="tab">Miesiąc</span> kliknij <span class="btn">Wpisz raport z kasy</span> i przepisz kwotę z raportu miesięcznego. Wpisz go także, gdy sprzedaży nie było, wtedy kwota to 0.</li>
+</ol>
+
+<div class="box tip">
+<p><strong>Zasada 9. dnia.</strong> Faktura za poprzedni miesiąc, która przyjdzie do 9. dnia włącznie, liczy się jeszcze do poprzedniego miesiąca. Faktura, która przyjdzie później, przechodzi na bieżący miesiąc. Dlatego najwygodniej zamykać miesiąc <strong>10. dnia albo później</strong>. Wtedy wszystkie faktury są już na miejscu.</p>
+</div>
+
+<h2>Kalendarz jednego miesiąca</h2>
+<p>Przykład dla października. Z każdym innym miesiącem jest tak samo.</p>
+
+<div class="figure">
+<svg viewBox="0 0 760 230" xmlns="http://www.w3.org/2000/svg" font-family="Inter, DejaVu Sans, sans-serif">
+  <!-- oś -->
+  <line x1="30" y1="110" x2="740" y2="110" stroke="#9aa6b8" stroke-width="3"/>
+  <!-- etykiety miesięcy -->
+  <rect x="30" y="98" width="180" height="24" rx="12" fill="#e8f0fb"/>
+  <text x="120" y="115" text-anchor="middle" font-size="12" font-weight="700" fill="#1f5fae">październik</text>
+  <rect x="230" y="98" width="510" height="24" rx="12" fill="#f4f6fa"/>
+  <text x="485" y="115" text-anchor="middle" font-size="12" font-weight="700" fill="#5b6475">listopad</text>
+  <!-- punkty -->
+  <g font-size="11.5" fill="#1d2433" text-anchor="middle">
+    <circle cx="120" cy="110" r="0"/>
+    <!-- 1-31 X -->
+    <line x1="120" y1="98" x2="120" y2="60" stroke="#c5d8f2" stroke-width="2"/>
+    <rect x="45" y="14" width="150" height="46" rx="8" fill="#ffffff" stroke="#c5d8f2"/>
+    <text x="120" y="33" font-weight="700">cały miesiąc</text>
+    <text x="120" y="50" fill="#5b6475">faktury, decyzje</text>
+
+    <circle cx="260" cy="110" r="8" fill="#1f5fae"/>
+    <line x1="260" y1="122" x2="260" y2="158" stroke="#c5d8f2" stroke-width="2"/>
+    <rect x="190" y="158" width="140" height="62" rx="8" fill="#ffffff" stroke="#c5d8f2"/>
+    <text x="260" y="177" font-weight="700">1.–9. listopada</text>
+    <text x="260" y="194" fill="#5b6475">raport z kasy,</text>
+    <text x="260" y="210" fill="#5b6475">dochodzą faktury</text>
+
+    <circle cx="420" cy="110" r="10" fill="#1f5fae"/>
+    <line x1="420" y1="98" x2="420" y2="64" stroke="#1f5fae" stroke-width="2"/>
+    <rect x="335" y="8" width="170" height="56" rx="8" fill="#1f5fae"/>
+    <text x="420" y="30" font-weight="700" fill="#ffffff">od 10. listopada</text>
+    <text x="420" y="48" fill="#ffffff">zamknij październik</text>
+
+    <circle cx="545" cy="110" r="8" fill="#1e7a46"/>
+    <line x1="545" y1="122" x2="545" y2="158" stroke="#bfe3cc" stroke-width="2"/>
+    <rect x="465" y="158" width="160" height="62" rx="8" fill="#e6f5ec" stroke="#bfe3cc"/>
+    <text x="545" y="177" font-weight="700">ten sam dzień</text>
+    <text x="545" y="194" fill="#5b6475">DRA do eZUS,</text>
+    <text x="545" y="210" fill="#5b6475">przelew ZUS</text>
+
+    <circle cx="690" cy="110" r="8" fill="#1e7a46"/>
+    <line x1="690" y1="98" x2="690" y2="64" stroke="#bfe3cc" stroke-width="2"/>
+    <rect x="615" y="8" width="140" height="56" rx="8" fill="#e6f5ec" stroke="#bfe3cc"/>
+    <text x="685" y="30" font-weight="700">do 20. listopada</text>
+    <text x="685" y="48" fill="#5b6475">przelew PIT</text>
+  </g>
+</svg>
+<div class="caption">Terminy w aplikacji: ZUS do 10., zaliczka PIT do 20. dnia następnego miesiąca. Ustawowy termin ZUS to 20., więc 10. daje Ci zapas.</div>
+</div>
+
+<h2>Zamknięcie miesiąca krok po kroku</h2>
+<p>Zamknięcie działa jak zaklejenie koperty. Aplikacja liczy kwoty, zapisuje je i blokuje zmiany w tym miesiącu, żeby liczby w deklaracji i w księdze się zgadzały.</p>
+
+<ol class="steps">
+  <li>Wejdź w <span class="tab">Miesiąc</span> i strzałką przejdź do miesiąca, który zamykasz. Na dole kliknij <span class="btn">Zamknij miesiąc</span>.</li>
+  <li><strong>Sprawdź czerwoną ramkę „Zanim zamkniesz”.</strong> Jeśli jest, wypisuje, czego jeszcze brakuje. Najczęściej:
+    <ul>
+      <li>nie wpisano raportu z kasy;</li>
+      <li>faktury z KSeF czekają na decyzję;</li>
+      <li>miesiąc jeszcze trwa (zamknąć można od 1. dnia następnego miesiąca);</li>
+      <li>poprzedni miesiąc nie jest zamknięty (miesiące zamyka się po kolei);</li>
+      <li>w styczniu: brakuje dochodu z grudnia poprzedniego roku (pole do wpisania pojawi się na tej stronie).</li>
+    </ul>
+    Uzupełnij to, czego brakuje, i wróć. Dopóki ramka jest widoczna, przycisk zamknięcia nie działa.</li>
+  <li><strong>Przeczytaj uwagi</strong> w żółtej ramce, jeśli się pojawią. Przykład: zamykasz przed 10. dniem i mogą jeszcze dojść faktury. Albo aplikacja od ponad 2 dni nie mogła pobrać faktur z KSeF. Wtedy zaznacz pole „Sprawdziłam…”, ale tylko jeśli wiesz, że wszystkie faktury są w księdze.</li>
+  <li><strong>Sprawdź „Do zapłaty”.</strong> Widzisz rozpisane składki ZUS, zdrowotną (z wyjaśnieniem, od jakiego dochodu), sumę ZUS, zaliczkę na PIT i łączną kwotę.</li>
+  <li>Kliknij <span class="btn">Zamknij miesiąc</span>. Gotowe. Na stronie miesiąca pojawi się karta z kwotami i przyciskiem <span class="btn">Pobierz plik DRA</span>.</li>
+</ol>
+
+
+<h2>Deklaracja ZUS (DRA) krok po kroku</h2>
+<p>Aplikacja tworzy plik w formacie, który eZUS umie wczytać. Plik wgrywasz sama, a deklaracja trafia do wersji roboczych. Nic nie idzie do ZUS, dopóki jej nie podpiszesz i nie wyślesz.</p>
+
+<div class="figure">
+<svg viewBox="0 0 760 120" xmlns="http://www.w3.org/2000/svg" font-family="Inter, DejaVu Sans, sans-serif">
+  <defs>
+    <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f5fae"/></marker>
+  </defs>
+  <g font-size="12" text-anchor="middle">
+    <rect x="5" y="20" width="135" height="80" rx="10" fill="#e8f0fb" stroke="#c5d8f2"/>
+    <text x="72" y="52" font-weight="700" fill="#1d2433">Mała Księgowa</text>
+    <text x="72" y="72" fill="#5b6475">Pobierz plik DRA</text>
+    <path d="M140,60 L180,60" stroke="#1f5fae" stroke-width="2" marker-end="url(#b)"/>
+    <rect x="183" y="20" width="135" height="80" rx="10" fill="#ffffff" stroke="#d9dee7"/>
+    <text x="250" y="52" font-weight="700" fill="#1d2433">Twój komputer</text>
+    <text x="250" y="72" fill="#5b6475">ZUS-2026-10.xml</text>
+    <path d="M318,60 L358,60" stroke="#1f5fae" stroke-width="2" marker-end="url(#b)"/>
+    <rect x="361" y="20" width="135" height="80" rx="10" fill="#ffffff" stroke="#d9dee7"/>
+    <text x="428" y="52" font-weight="700" fill="#1d2433">eZUS</text>
+    <text x="428" y="72" fill="#5b6475">Import KEDU</text>
+    <path d="M496,60 L536,60" stroke="#1f5fae" stroke-width="2" marker-end="url(#b)"/>
+    <rect x="539" y="20" width="100" height="80" rx="10" fill="#fff4e0" stroke="#f0d6a8"/>
+    <text x="589" y="52" font-weight="700" fill="#1d2433">Robocze</text>
+    <text x="589" y="72" fill="#5b6475">sprawdzasz</text>
+    <path d="M639,60 L672,60" stroke="#1f5fae" stroke-width="2" marker-end="url(#b)"/>
+    <rect x="675" y="20" width="80" height="80" rx="10" fill="#e6f5ec" stroke="#bfe3cc"/>
+    <text x="715" y="52" font-weight="700" fill="#1d2433">Podpis</text>
+    <text x="715" y="72" fill="#5b6475">i wysyłka</text>
+  </g>
+</svg>
+</div>
+
+<ol class="steps">
+  <li>Na stronie zamkniętego miesiąca kliknij <span class="btn">Pobierz plik DRA</span>. Zapisze się plik, np. <strong>ZUS-2026-10.xml</strong>.</li>
+  <li>Zaloguj się na <strong>www.zus.pl</strong> (eZUS).</li>
+  <li>Przejdź: <strong>ePłatnik → Dokumenty → Dokumenty ubezpieczeniowe → „Import KEDU”</strong> i wskaż pobrany plik.</li>
+  <li>Deklaracja pojawi się w <strong>dokumentach roboczych</strong>. Otwórz ją i porównaj kwotę z kartą „Do zapłaty” w aplikacji.</li>
+  <li>Podpisz i wyślij deklarację (profilem zaufanym, tak jak zwykle logujesz się do eZUS).</li>
+  <li>Zrób <strong>jeden przelew ZUS</strong> na swój rachunek składkowy, z kwotą „ZUS razem”, do 10. dnia.</li>
+  <li>Do 20. dnia zapłać <strong>zaliczkę na PIT</strong> na swój mikrorachunek podatkowy (symbol PIT-36).</li>
+</ol>
+
+<div class="box ok">
+<p><strong>Za pierwszym razem</strong> warto sprawdzić deklarację w eZUS uważniej: dane płatnika, okres i kwoty. Jeśli coś się nie zgadza, nie wysyłaj jej. Napisz do Claude, co widzisz.</p>
+</div>
+
+<h2>Gdy trzeba coś poprawić</h2>
+<p>Przykład: zamknęłaś październik 5 listopada, a 7 listopada przyszła jeszcze faktura za październik. Aplikacja pokaże ją w <span class="tab">Faktury</span> z linkiem do otwarcia października.</p>
+<ol class="steps">
+  <li>Na stronie zamkniętego miesiąca, w karcie „Otwórz ponownie”, zaznacz pole „Rozumiem…” i kliknij <span class="btn">Otwórz miesiąc ponownie</span>.</li>
+  <li>Wprowadź poprawkę, np. podejmij decyzję o fakturze.</li>
+  <li>Zamknij miesiąc jeszcze raz. Aplikacja pokaże, jak zmieniły się kwoty („było → jest”).</li>
+  <li>Jeśli deklaracja była już wysłana: pobierz nowy plik DRA, zaimportuj go w eZUS jako korektę i dopłać różnicę.</li>
+</ol>
+<p class="small">Miesiące są ze sobą połączone, bo podatek liczy się narastająco od stycznia, a zdrowotna od dochodu z poprzedniego miesiąca. Żeby otworzyć wcześniejszy miesiąc, trzeba najpierw otworzyć późniejsze zamknięte miesiące. Aplikacja powie, które.</p>
+
+
+<h2>Wakacje składkowe (raz w roku)</h2>
+<p>W wybranym miesiącu nie płacisz składek społecznych ani Funduszu Pracy, płacisz tylko zdrowotną.</p>
+<ol class="steps">
+  <li>Gdy zdecydujesz, w którym miesiącu bierzesz wakacje, wpisz go w <span class="tab">Ustawienia</span> → „Wakacje składkowe”. Możesz to zrobić w każdej chwili.</li>
+  <li>W miesiącu <strong>przed</strong> wakacjami aplikacja pokaże kartę „Złóż wniosek RWS do …” z potrzebnymi danymi. Wniosek RWS składasz w eZUS, najpóźniej ostatniego dnia tego miesiąca.</li>
+  <li>Po zamknięciu miesiąca wakacji plik z aplikacji zawiera <strong>trzy dokumenty</strong>: deklarację DRA i dwa raporty RCA. Importujesz go tak samo jak zwykle i wysyłasz wszystkie trzy razem.</li>
+</ol>
+<div class="box warn">
+<p>Jeśli wniosku RWS nie złożysz albo ZUS go nie przyjmie, usuń miesiąc wakacji z Ustawień. Wtedy aplikacja policzy pełne składki.</p>
+</div>
+
+<h2>Raz w roku i jednorazowo</h2>
+<table>
+  <tr><th style="width:30%">Kiedy</th><th>Co zrobić</th></tr>
+  <tr><td><strong>Token KSeF</strong></td><td>Zrobione (30.10.2026). Token działa, dopóki go nie unieważnisz. Nie usuwaj go w Aplikacji Podatnika KSeF: po 31 grudnia 2026 nowego tokenu nie da się już wygenerować.</td></tr>
+  <tr><td><strong>Grudzień każdego roku</strong></td><td>Stawki na nowy rok (podstawa składek ZUS, skala podatku) trzeba potwierdzić i wpisać do aplikacji. Zrób to z Claude. Dopóki stawki są tylko prognozą, aplikacja nie pozwoli zamknąć miesiąca, żeby nie powstała błędna deklaracja.</td></tr>
+  <tr><td><strong>Styczeń 2027</strong></td><td>Przy zamykaniu stycznia wpisz dochód z grudnia 2026 (przychód minus koszty minus zapłacone składki społeczne, a przy stracie 0). Od niego liczy się zdrowotna za styczeń.</td></tr>
+</table>
+
+<h2>Bezpieczeństwo</h2>
+<ul>
+  <li>Logujesz się hasłem i 6-cyfrowym kodem z aplikacji w telefonie.</li>
+  <li>Hasła, kodu z telefonu ani tokenu KSeF nie wysyłaj nikomu, także Claude.</li>
+  <li>Kopie zapasowe aplikacji i bazy robi się same co noc (JetBackup w cPanelu).</li>
+  <li>Aplikacja niczego nie wysyła do ZUS ani do urzędu skarbowego. Każdą deklarację wysyłasz sama.</li>
+</ul>
+
+</body>
+</html>

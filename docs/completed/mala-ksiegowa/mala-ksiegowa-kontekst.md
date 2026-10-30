@@ -110,7 +110,7 @@ Co potwierdzono na prawdziwym teście:
 
 ## Etap 2 – reguły podatkowe i składkowe (2026-10-29)
 
-Pliki: `config/years/2026.json`, `config/years/2027.json`, `src/rules/{money,config,kpir,zus,pit,holiday,year}.ts`, `test/rules/rules.test.ts`, `scripts/rules-example.ts`, `docs/active/mala-ksiegowa/przyklad-wyliczen.md`. Testy: `npm test` 39/39 (11 KSeF + 28 reguł), `npm run typecheck` czysto.
+Pliki: `config/years/2026.json`, `config/years/2027.json`, `src/rules/{money,config,kpir,zus,pit,holiday,year}.ts`, `test/rules/rules.test.ts`, `scripts/rules-example.ts`, `docs/completed/mala-ksiegowa/przyklad-wyliczen.md`. Testy: `npm test` 39/39 (11 KSeF + 28 reguł), `npm run typecheck` czysto.
 
 Źródła (sandbox nie ma dostępu do zus.pl/sejm.gov.pl – czytane przez przeglądarkę Pawła):
 - zus.pl „Informacja o wysokości składek na ubezpieczenia społeczne w 2026 r.” (2.02.2026): podstawa 5652 zł, emerytalne 1103,27, rentowe 452,16, wypadkowe 94,39 (1,67%), chorobowe 138,47, FP+FS 138,47; razem bez chorobowego 1788,29 zł. Minimum zdrowotnej (skala): 314,96 zł za styczeń 2026, 432,54 zł od lutego 2026 do stycznia 2027.
@@ -216,7 +216,7 @@ Decyzje:
 - Jedna lista nazw miesięcy (`src/dates.ts`: `monthName`, `monthTitle`); plik dla eZUS nazywa się `ZUS-RRRR-MM.xml`.
 - Testy: 136 z bazą, 84 bez; typecheck czysty; ekrany obejrzane (szerokość telefonu).
 
-## Etap 8 – wdrożenie (2026-10-30, w toku)
+## Etap 8 – wdrożenie (2026-10-30, zakończone)
 - **Sekrety w `.env`** w katalogu aplikacji (prawa 600): `server.mjs` ładuje go `process.loadEnvFile` (zmienne z formularza cPanelu mają pierwszeństwo), skrypty npm i cron – `node --env-file(-if-exists)=.env`. Jeden plik dla aplikacji i crona (cron nie widzi zmiennych z formularza „Setup Node.js App”). Klucz losowany na serwerze (`openssl rand`), hasło bazy wpisywane `read -s` – nikt ich nie widzi w czacie.
 - **Paczka**: `npm run package` → `dist/mala-ksiegowa-DATA-COMMIT.tar.gz` (+ `.sha256`), z `git archive` (tylko zapisane pliki: bez testów, `.env`, skryptów testowego KSeF); zależności `npm ci --omit=dev` na serwerze, w środowisku Node z cPanelu (jak gabinet).
 - **Przećwiczone lokalnie** na rozpakowanej paczce: `npm ci --omit=dev`, `.env` jak w instrukcji, `npm run migrate` (2× – idempotentne), start `server.mjs`, `/zdrowie` = ok, skrypt crona.
@@ -224,6 +224,15 @@ Decyzje:
 - **Domena**: `za-horyzont.pl` jest na koncie jako domena dodatkowa (addon); propozycja subdomeny `ksiegowa.za-horyzont.pl` – do potwierdzenia przez Pawła. DNS nie dało się sprawdzić z sandboxa.
 - **Token KSeF (ważne)**: Aplikacja Podatnika KSeF 2.0 (ap.ksef.mf.gov.pl) generuje tokeny **do 31.12.2026** (ksef.podatki.gov.pl, strona aplikacji, zmod. 15.10.2026); token ważny do unieważnienia (Podręcznik KSeF 2.0 cz. I, 2.4.2). Kroki: Tokeny → Generuj token, nazwa, uprawnienie do przeglądania faktur, wyświetlany raz (2.4.6).
 - Wzorzec: instrukcja gabinetu `~/za-horyzont-app/VH-WDROZENIE.md` (przeczytana przez API cPanelu, bez zmian).
+
+- **Wdrożone 2026-10-30 na https://ksiegowa.za-horyzont.pl** (zgoda Pawła na kroki w cPanelu):
+  - kod przez **cPanel Git** (repo publiczne) zamiast paczki – aktualizacja: „Update from Remote”, `npm ci --omit=dev`, `npm run migrate`, Restart; paczka `tar.gz` została jako sposób zapasowy;
+  - aplikacja Node 24.22.1, Production, katalog `~/mala-ksiegowa-app`, start `server.mjs`;
+  - baza `vh20129_ksiegowa`, użytkownik `vh20129_ksiegowa_app` (cPanel nie pozwala nazwać użytkownika tak jak bazę), `.env` utworzony przez `scripts/setup-vh.sh` na serwerze;
+  - cron 6:15 (API2 Cron), JetBackup 5 codziennie (bazy: 15 kopii).
+- **Pułapki wdrożenia**: skrypt `activate` CloudLinux nie znosi `set -u` (wyłączać na czas `source`); konto cPanel nie ma praw do tabel aplikacji (phpPgAdmin nie zmieni danych – zmiany w danych tylko przez `node --env-file=.env` w Terminalu).
+- **Użytkowniczka**: aplikacji używa żona Pawła (login `marta`) – teksty w formie żeńskiej. Instrukcja obsługi: `docs/instrukcja/`.
+- **Review PR #1 (Codex)**: styczeń blokowany bez dochodu z grudnia; `assertMonthOpen` zakłada wiersz `months` (blokada przy zamykaniu). PR #1 zmergowany do `claude/project-thread-tqtl79`.
 
 ## Planowany układ plików
 

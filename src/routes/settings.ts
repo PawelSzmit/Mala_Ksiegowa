@@ -56,7 +56,7 @@ async function saveHoliday(ctx: RouteContext) {
     if (month !== null && month !== saved) {
       const rws = rwsApplicationMonth(year, month);
       if (`${rws.year}-${String(rws.month).padStart(2, '0')}` < warsawToday(ctx.now()).slice(0, 7)) {
-        notice = `Termin wniosku RWS za ${monthName(month)} ${year} już minął (składa się go w miesiącu przed wakacjami: ${String(rws.month).padStart(2, '0')}/${rws.year}). Zostaw wakacje tylko, jeśli wniosek złożyłeś i ZUS go przyjął – inaczej składki trzeba zapłacić normalnie.`;
+        notice = `Termin wniosku RWS za ${monthName(month)} ${year} już minął (składa się go w miesiącu przed wakacjami: ${String(rws.month).padStart(2, '0')}/${rws.year}). Zostaw wakacje tylko, jeśli wniosek złożyłaś i ZUS go przyjął – inaczej składki trzeba zapłacić normalnie.`;
       }
     }
     await saveHolidayMonth(ctx.db, year, month);
