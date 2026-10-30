@@ -133,11 +133,23 @@ Stan (2026-10-30): gotowe poza punktem kontrolnym z Pawłem. 124 testy zielone (
 - [x] Decyzja Pawła: start księgi od stycznia 2027 (Paweł, 2026-10-30) → przy zamknięciu stycznia 2027 wpisać dochód z grudnia 2026; w Ustawieniach KSeF data początkowa 2027-01-01
 - [ ] Przed pierwszym prawdziwym DRA porównać z ePłatnikiem: czy eZUS przyjmuje plik bez REGON-u i nazwy skróconej (pola opcjonalne w schemacie) (Paweł/Claude)
 
+## Do poprawy po review fazy 6
+Raport: `docs/active/mala-ksiegowa/review-faza-6.md`. Decyzja: można iść dalej z zastrzeżeniami (0×P1, 2×P2, 5×P3).
+- [ ] P2-1: blokada zamknięcia, gdy ustawienia roku mają status „prognoza” (2027 do potwierdzenia przed zamknięciem stycznia 2027) + test (Claude, przed wdrożeniem)
+- [ ] P2-2: ekran zamknięcia pokazuje datę ostatniego udanego pobrania z KSeF; przeszkoda/ostrzeżenie, gdy pobieranie nie działa lub jest starsze niż ~2 dni (Claude, przed wdrożeniem)
+- [ ] P3-1: uwaga przy zamykaniu w dniach 1–9: „do 9. mogą jeszcze przyjść faktury za ten miesiąc” (Claude)
+- [ ] P3-2: `assertMonthOpen` z `FOR SHARE` (zapis czeka na trwające zamknięcie) (Claude, opcjonalnie)
+- [x] P3-3: zapytać Pawła, czy w grudniu 2026 bierze wakacje składkowe → nie bierze (Paweł, 2026-10-30)
+- [ ] P3-4: jedna lista nazw miesięcy (Claude, porządki)
+- [ ] P3-5: testy: ~~zamknięcie miesiąca wakacji~~ (zrobione w etapie 7), rok z prognozą, otwarcie grudnia przy zamkniętym styczniu (Claude)
+
 ## Etap 7. Wakacje składkowe
-- [ ] Potwierdzić postać DRA w miesiącu wakacji (Claude)
-- [ ] Zaznaczanie miesiąca wakacji w ustawieniach roku (Claude)
-- [ ] Przypomnienie w miesiącu poprzedzającym + dane do wniosku RWS (Claude)
-- [ ] Zapytać Pawła o miesiąc wakacji w 2027 (Claude → Paweł)
+- [x] Potwierdzić postać DRA w miesiącu wakacji (Claude) → instrukcja ZUS: DRA + RCA 05 14 + RCA 05 10 w jednym pliku
+- [x] Zaznaczanie miesiąca wakacji w ustawieniach roku (Claude) → Ustawienia → „Wakacje składkowe”
+- [x] Przypomnienie w miesiącu poprzedzającym + dane do wniosku RWS (Claude)
+- [x] Plik dla eZUS w miesiącu wakacji (DRA + 2×RCA) i testy (Claude)
+- [ ] Zapytać Pawła o miesiąc wakacji w 2027 (Claude → Paweł) – zapytany 2026-10-30; Paweł może też sam ustawić w aplikacji
+- [ ] Przy pierwszym miesiącu wakacji: import pliku z trzema dokumentami w eZUS jako roboczych, bez błędów krytycznych (Paweł)
 
 ## Etap 8. Wdrożenie na vh.pl
 - [ ] Zapytać Pawła o nazwę subdomeny (Claude → Paweł)

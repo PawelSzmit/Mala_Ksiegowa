@@ -1,10 +1,13 @@
 // Ustawienia KSeF: NIP, token (zapisywany zaszyfrowany, nigdy nie wyświetlany), data początkowa, środowisko.
-// Dane płatnika do DRA: imię, nazwisko, PESEL, REGON, nazwa skrócona.
+// Dane płatnika do DRA: imię, nazwisko, PESEL, REGON, nazwa skrócona. Miesiąc wakacji składkowych (bieżący i następny rok).
 import { encryptSecret } from '../crypto/secret-box.ts';
 import { HttpError, readForm, send } from '../http/http.ts';
 import { parseDateInput, parseNip, requiredText } from '../http/inputs.ts';
 import { isValidPesel } from '../zus/kedu-dra.ts';
 import { warsawToday } from '../dates.ts';
+import { monthName } from '../month/close.ts';
+import { loadHolidayMonths, saveHolidayMonth } from '../month/holiday.ts';
+import { rwsApplicationMonth } from '../rules/holiday.ts';
 import { settingsPage, type PayerValues, type SettingsValues } from '../views/forms.ts';
 import type { Route, RouteContext } from './context.ts';
 
@@ -20,6 +23,44 @@ async function loadPayer(ctx: RouteContext): Promise<PayerValues> {
     'SELECT first_name, last_name, pesel, regon, short_name FROM settings WHERE id = 1',
   );
   return { first_name: p!.first_name ?? '', last_name: p!.last_name ?? '', pesel: p!.pesel ?? '', regon: p!.regon ?? '', short_name: p!.short_name ?? '' };
+}
+
+type PageExtras = Partial<Omit<Parameters<typeof settingsPage>[0], 'user' | 'holidays'>>;
+
+/** Strona ustawień z aktualnymi danymi z bazy; `extras` nadpisuje wartości formularza i dodaje komunikaty. */
+async function render(ctx: RouteContext, status: number, extras: PageExtras = {}) {
+  const year = Number(warsawToday(ctx.now()).slice(0, 4));
+  const holidays = await loadHolidayMonths(ctx.db, [year, year + 1]);
+  send(ctx.res, status, settingsPage({
+    user: ctx.user, values: extras.values ?? await load(ctx), payer: extras.payer ?? await loadPayer(ctx),
+    ...extras, holidays: [...holidays].map(([y, month]) => ({ year: y, month })),
+  }).value);
+}
+
+async function saveHoliday(ctx: RouteContext) {
+  const form = await readForm(ctx.req);
+  const current = Number(warsawToday(ctx.now()).slice(0, 4));
+  const year = Number(form.get('year'));
+  const rawMonth = form.get('month') ?? '';
+  try {
+    if (year !== current && year !== current + 1) throw new HttpError(400, `Wakacje można ustawić na rok ${current} albo ${current + 1}`);
+    const month = rawMonth === '' ? null : Number(rawMonth);
+    if (month !== null && !(Number.isInteger(month) && month >= 1 && month <= 12)) throw new HttpError(400, 'Wybierz miesiąc z listy');
+    const saved = (await loadHolidayMonths(ctx.db, [year])).get(year);
+    if (month !== null && month !== saved) {
+      // Wniosek RWS składa się w miesiącu przed wakacjami – na miesiąc, którego termin minął, ZUS zwolnienia nie da.
+      const rws = rwsApplicationMonth(year, month);
+      const today = warsawToday(ctx.now());
+      if (`${rws.year}-${String(rws.month).padStart(2, '0')}` < today.slice(0, 7)) {
+        throw new HttpError(400, `Na ${monthName(month)} ${year} jest już za późno: wniosek RWS trzeba było złożyć w miesiącu przed wakacjami (${String(rws.month).padStart(2, '0')}/${rws.year}).`);
+      }
+    }
+    await saveHolidayMonth(ctx.db, year, month);
+    await render(ctx, 200, { holidaySaved: true });
+  } catch (error) {
+    if (!(error instanceof HttpError)) throw error;
+    await render(ctx, error.status, { holidayError: error.message });
+  }
 }
 
 async function savePayer(ctx: RouteContext) {
@@ -41,10 +82,10 @@ async function savePayer(ctx: RouteContext) {
       'UPDATE settings SET first_name = $1, last_name = $2, pesel = $3, regon = $4, short_name = $5, updated_at = now() WHERE id = 1',
       [firstName, lastName, pesel, regon || null, shortName || null],
     );
-    send(ctx.res, 200, settingsPage({ user: ctx.user, values: await load(ctx), payer: await loadPayer(ctx), payerSaved: true }).value);
+    await render(ctx, 200, { payerSaved: true });
   } catch (error) {
     if (!(error instanceof HttpError)) throw error;
-    send(ctx.res, error.status, settingsPage({ user: ctx.user, values: await load(ctx), payer: values, payerError: error.message }).value);
+    await render(ctx, error.status, { payer: values, payerError: error.message });
   }
 }
 
@@ -77,10 +118,10 @@ async function save(ctx: RouteContext) {
        WHERE id = 1`,
       [nip, values.ksef_env, syncFrom, token ? encryptSecret(token, ctx.encryptionKey) : null, restart],
     );
-    send(ctx.res, 200, settingsPage({ user: ctx.user, values: await load(ctx), saved: true, payer: await loadPayer(ctx) }).value);
+    await render(ctx, 200, { saved: true });
   } catch (error) {
     if (!(error instanceof HttpError)) throw error;
-    send(ctx.res, error.status, settingsPage({ user: ctx.user, values, error: error.message, payer: await loadPayer(ctx) }).value);
+    await render(ctx, error.status, { values, error: error.message });
   }
 }
 
@@ -89,9 +130,13 @@ export const settingsRoute: Route = async (ctx) => {
     await savePayer(ctx);
     return true;
   }
+  if (ctx.url.pathname === '/ustawienia/wakacje' && ctx.method === 'POST') {
+    await saveHoliday(ctx);
+    return true;
+  }
   if (ctx.url.pathname !== '/ustawienia') return false;
   if (ctx.method === 'GET') {
-    send(ctx.res, 200, settingsPage({ user: ctx.user, values: await load(ctx), payer: await loadPayer(ctx) }).value);
+    await render(ctx, 200);
     return true;
   }
   if (ctx.method === 'POST') {

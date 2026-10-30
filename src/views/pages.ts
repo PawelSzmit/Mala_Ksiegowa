@@ -3,6 +3,7 @@ import { layout } from './layout.ts';
 import { date, monthHref, pln } from './format.ts';
 import { syncStatusBox, type SyncStatus } from './invoices.ts';
 import type { SavedMonthResult } from '../month/close.ts';
+import type { RwsReminder } from '../month/holiday.ts';
 import { closedMonthCard } from './month-close.ts';
 
 export const MONTH_NAMES = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
@@ -51,7 +52,35 @@ export interface MonthView {
   closed: SavedMonthResult | null;
   /** Od 1. do 9. dnia: faktury za poprzedni miesiąc czekające na decyzję. */
   pendingPrevious: { year: number; month: number; count: number } | null;
+  /** Następny miesiąc to wakacje składkowe – w tym miesiącu trzeba złożyć wniosek RWS. */
+  rws: RwsReminder | null;
+  /** Ten miesiąc to miesiąc wakacji składkowych. */
+  holiday: boolean;
 }
+
+/** Przypomnienie o wniosku RWS z danymi do przepisania (wniosek składa się tylko w eZUS, pliku nie da się zaimportować). */
+function rwsCard(r: RwsReminder, year: number, month: number): Html {
+  const target = `${MONTH_NAMES[r.month - 1]!.toLowerCase()} ${r.year}`;
+  const p = r.payer;
+  const row = (label: string, value: string | null) => html`<div class="row"><span>${label}</span><strong>${value || '—'}</strong></div>`;
+  return html`<div class="card notice" id="rws">
+  <h2>Złóż wniosek RWS do ${lastDay(year, month)}</h2>
+  <p>Wakacje składkowe za ${target} – wniosek trzeba złożyć w eZUS w tym miesiącu, później ZUS go nie uwzględni.${
+    r.saving !== null ? html` Zwolnienie obejmie około <strong>${pln(r.saving)}</strong> składek społecznych i Funduszu Pracy (zdrowotną płacisz normalnie).` : ''}</p>
+  <p class="hint">W eZUS znajdź wniosek „RWS” (o zwolnienie z obowiązku opłacenia składek za wybrany miesiąc) – najprościej wpisując RWS w wyszukiwarkę dokumentów. Dane do wniosku:</p>
+  ${row('Miesiąc zwolnienia', `${String(r.month).padStart(2, '0')}/${r.year}`)}
+  ${row('NIP', p.nip)}
+  ${row('PESEL', p.pesel)}
+  ${row('REGON', p.regon)}
+  ${row('Nazwisko i imię', p.last_name || p.first_name ? `${p.last_name ?? ''} ${p.first_name ?? ''}`.trim() : null)}
+  <p class="hint">Kod PKD i jego wersję przepisz z CEIDG. Gdy ZUS odmówi zwolnienia, usuń wakacje w <a href="/ustawienia#wakacje">Ustawieniach</a> – składki za ${target} trzeba wtedy zapłacić normalnie.</p>
+</div>`;
+}
+
+const lastDay = (year: number, month: number) => {
+  const d = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return `${d}.${String(month).padStart(2, '0')}.${year}`;
+};
 
 const shift = (year: number, month: number, delta: number) => {
   const d = new Date(Date.UTC(year, month - 1 + delta, 1));
@@ -88,6 +117,8 @@ export function monthPage(view: MonthView, user: { username: string }, notice?: 
   <span class="badge">${open ? 'Otwarty' : 'Zamknięty'}</span>
 </div>
 ${notice ? html`<div class="card notice" role="status">${notice}</div>` : ''}
+${view.rws ? rwsCard(view.rws, view.year, view.month) : ''}
+${view.holiday && open ? html`<div class="card notice"><strong>Miesiąc wakacji składkowych.</strong> Składek społecznych i Funduszu Pracy za ten miesiąc nie płacisz, zdrowotną tak. Zwolnienie działa tylko wtedy, gdy ZUS przyjął wniosek RWS – jeśli odmówił, usuń wakacje w <a href="/ustawienia#wakacje">Ustawieniach</a>.</div>` : ''}
 ${view.pendingPrevious ? html`<div class="card error" role="alert"><strong>Faktury za ${MONTH_NAMES[view.pendingPrevious.month - 1]!.toLowerCase()} czekają na decyzję: ${view.pendingPrevious.count}.</strong> Przyszły do 9. dnia, więc należą do poprzedniego miesiąca – rozstrzygnij je przed zapłatą ZUS 10. i przed zamknięciem tamtego miesiąca. · <a href="/faktury">Przejrzyj</a></div>` : ''}
 ${view.invoicesToReview ? html`<div class="card notice">Faktury z KSeF do przejrzenia: <strong>${view.invoicesToReview}</strong> · <a href="/faktury">Przejrzyj</a></div>` : ''}
 <div class="card">

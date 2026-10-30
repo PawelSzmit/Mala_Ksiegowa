@@ -15,6 +15,7 @@ import { costsRoute } from './routes/costs.ts';
 import { invoicesRoute } from './routes/invoices.ts';
 import { monthCloseRoute } from './routes/month-close.ts';
 import { pendingInvoicesFor, type SavedMonthResult } from './month/close.ts';
+import { loadHolidayMonths, rwsReminderFor } from './month/holiday.ts';
 import { settingsRoute } from './routes/settings.ts';
 
 export { currentMonth };
@@ -42,7 +43,7 @@ export function createApp(deps: AppDeps) {
     const today = warsawToday(now());
     const prev = month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
     const isCurrent = today.startsWith(`${year}-${String(month).padStart(2, '0')}`);
-    const [m, inv, cash, entries, sync, pendingPrevious] = await Promise.all([
+    const [m, inv, cash, entries, sync, pendingPrevious, rws, holidays] = await Promise.all([
       deps.db.query<{ status: 'open' | 'closed'; results: SavedMonthResult | null }>('SELECT status, results FROM months WHERE year = $1 AND month = $2', [year, month]),
       deps.db.query<{ n: number }>("SELECT count(*)::int AS n FROM invoices WHERE status = 'to_review'"),
       deps.db.query<{ amount: number; has_photo: boolean }>('SELECT amount, photo IS NOT NULL AS has_photo FROM cash_reports WHERE year = $1 AND month = $2', [year, month]),
@@ -55,6 +56,8 @@ export function createApp(deps: AppDeps) {
       ),
       loadSyncStatus(deps.db),
       isCurrent && Number(today.slice(8, 10)) <= LATE_INVOICE_LAST_DAY ? pendingInvoicesFor(deps.db, prev.year, prev.month) : 0,
+      rwsReminderFor(deps.db, year, month),
+      loadHolidayMonths(deps.db, [year]),
     ]);
     const c = cash.rows[0];
     const status = m.rows[0]?.status ?? 'open';
@@ -63,6 +66,7 @@ export function createApp(deps: AppDeps) {
       cashReport: c ? { amount: c.amount, hasPhoto: c.has_photo } : null, entries: entries.rows, sync,
       closed: status === 'closed' ? m.rows[0]!.results : null,
       pendingPrevious: pendingPrevious ? { ...prev, count: pendingPrevious } : null,
+      rws, holiday: holidays.get(year) === month,
     };
   }
 

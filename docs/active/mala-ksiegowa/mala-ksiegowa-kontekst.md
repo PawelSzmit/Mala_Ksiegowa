@@ -2,7 +2,7 @@
 
 Gałąź: `claude/project-thread-eptw6o` (kontynuacja `claude/project-thread-tqtl79`)
 Ostatnia aktualizacja: 2026-10-30
-Stan: Etapy 1–6 gotowe (KSeF, reguły, logowanie, faktury/koszty/kasa, księga KPiR, zamknięcie miesiąca z DRA). Start księgi: 1.01.2027 (decyzja Pawła 2026-10-30). Czeka: import DRA w eZUS przez Pawła po wdrożeniu. Następny: etap 7 (wakacje składkowe).
+Stan: Etapy 1–7 gotowe (KSeF, reguły, logowanie, faktury/koszty/kasa, księga KPiR, zamknięcie miesiąca z DRA, wakacje składkowe). Start księgi: 1.01.2027 (decyzja Pawła 2026-10-30). Czeka: import DRA w eZUS przez Pawła po wdrożeniu; miesiąc wakacji w 2027 (pytanie do Pawła). Następny: poprawki P2 z review 6, potem etap 8 (wdrożenie).
 
 ## Kim jest użytkownik
 
@@ -182,13 +182,31 @@ Decyzje:
   - przeszkody: brak raportu z kasy, faktury do decyzji należące do miesiąca (zasada 9. dnia), miesiąc jeszcze trwa, brak danych płatnika (NIP, PESEL z sumą kontrolną, imię, nazwisko);
   - przy zamknięciu wpis FP do księgi (kol. 15, data 10. dnia – dzień płatności Pawła, kontrahent ZUS z adresem centrali ul. Szamocka 3, 5, 01-748 Warszawa), zapis wyniku w `months.results`;
   - ponowne otwarcie tylko z potwierdzeniem i gdy późniejsze miesiące są otwarte; poprzedni wynik zostaje do porównania („kwoty zmieniły się…”);
-  - DRA (`/miesiac/RRRR/MM/dra.xml`) tylko dla zamkniętego miesiąca, z zapisanego wyniku i aktualnych danych płatnika; miesiąc wakacji – zablokowany do etapu 7;
+  - DRA (`/miesiac/RRRR/MM/dra.xml`) tylko dla zamkniętego miesiąca, z zapisanego wyniku i aktualnych danych płatnika; miesiąc wakacji – patrz etap 7;
   - styczeń: gdy grudnia poprzedniego roku nie ma w aplikacji, pole „dochód z grudnia” (`years.previous_december_income`).
 - **Terminy na ekranie**: ZUS do 10. (dzień Pawła; ustawowo 20.), PIT do 20. następnego miesiąca.
 - **Z review 5**: ostrzeżenie na stronie bieżącego miesiąca od 1. do 9. dnia o fakturach za poprzedni miesiąc; karta faktury mówi, gdy jej miesiąc jest zamknięty (link do otwarcia); koszt spoza KSeF z NIP/VAT UE (`parseTaxId`) albo adresem (kol. 5 i 7); dane płatnika w Ustawieniach (`/ustawienia/dane`).
 - **Start**: Paweł prowadzi księgę w aplikacji od 1.01.2027 (decyzja 2026-10-30) – żadnego „stanu na start”, tylko dochód z grudnia 2026 przy zamknięciu stycznia.
 - **Otwarte**: Paweł importuje DRA w eZUS po wdrożeniu (punkt kontrolny, zgoda jest).
 - Testy: `test/zus/dra.test.ts` (przykład ZUS co do grosza, schemat, PESEL), `test/month-close.test.ts` (8 scenariuszy przez HTTP). 124 z bazą, 81 bez.
+
+- **Review etapu 6 (2026-10-30)**: można iść dalej z zastrzeżeniami (0×P1, 2×P2, 5×P3), raport `review-faza-6.md`. Najważniejsze: (1) zamknięcie działa na prognozowanych stawkach (2027 to prognoza) – zablokować przy statusie „prognoza”; (2) ekran zamknięcia nie ostrzega, gdy pobieranie z KSeF nie działa. Oba przed wdrożeniem.
+
+## Etap 7 – wakacje składkowe (2026-10-30)
+- **Źródło**: instrukcja ZUS „Jak wypełnić dokumenty rozliczeniowe, gdy uzyskasz zwolnienie z obowiązku opłacenia składek za wybrany miesiąc (tzw. wakacje składkowe)”, grudzień 2024 (docx na zus.pl, link w adnotacjach poradnika DRA), przykład 1; schemat `kedu_5_7.xsd` (t_RCA, t_DDORCA_B/C, t_ZDR) i `DRA_RCA.xml` z zestawu testowego BIP (identyfikator ubezpieczonego „P” = PESEL; p7–p10 finansuje ubezpieczony, p11–p14 płatnik, p15–p18 budżet).
+- **Ważne odkrycie**: w miesiącu wakacji sam DRA nie wystarcza. Plik KEDU zawiera trzy dokumenty:
+  - ZUS RCA z kodem 05 14 00: podstawy (III.B p4–p6; p5 tylko z chorobowym), składki „finansowane przez budżet państwa” p15–p18, suma p29;
+  - ZUS RCA z kodem 05 10 00: tylko kod w III.B, zdrowotna w III.C (p1 podstawa, p4 kwota) i III.E (forma opodatkowania, dochód, podstawa, kwota);
+  - ZUS DRA: IV p1–p3 i p10–p12, p20/p21 i p29/p30 (chorobowe p19/p28 tylko przy dobrowolnym), p37 = 0; VI zdrowotna; IX p2 = zdrowotna; bez VII (zwolnienia z FP przy opłacaniu tylko za siebie się nie wykazuje) i bez X/XI.
+  - Gdy dokumentów nie ma, ZUS tworzy je z urzędu z minimalną zdrowotną – ale to nie zwalnia z ich wysłania.
+- **W aplikacji**:
+  - Ustawienia → „Wakacje składkowe” (`/ustawienia/wakacje`): miesiąc na bieżący i następny rok (`years.holiday_month`); nowy miesiąc tylko, gdy termin RWS (miesiąc wcześniej) nie minął; zmiana zablokowana, gdy zamknięty jest miesiąc ≥ min(stary, nowy) – przy grudniu także styczeń następnego roku (`src/month/holiday.ts`).
+  - Strona miesiąca przed wakacjami: karta „Złóż wniosek RWS do …” z kwotą zwolnienia i danymi do przepisania (NIP, PESEL, REGON, nazwisko, miesiąc); RWS składa się tylko w eZUS (nie ma importu). Strona miesiąca wakacji: uwaga, że zwolnienie działa tylko po przyjęciu RWS.
+  - Zamknięcie miesiąca wakacji zapisuje `exemptSocial` (składki objęte zwolnieniem); plik `dra.xml` buduje wtedy DRA + 2×RCA (`buildDraKedu` z `exempt`). Miesiąc wakacji zamknięty przed tą zmianą wymaga ponownego zamknięcia.
+  - Następny miesiąc: nic nie zapłacono za miesiąc wakacji, więc brak wpisu FP i odliczenia składek (już w regułach z etapu 2).
+- **Grudzień 2026**: Paweł nie bierze wakacji (2026-10-30) – review 6 P3-3 zamknięte.
+- Testy: `test/zus/dra.test.ts` (+3: przykład 1 z instrukcji ZUS co do grosza, bez chorobowego, błędne dane), `test/holiday.test.ts` (4 scenariusze przez HTTP). 131 z bazą, 87 bez; typecheck czysty; ekrany obejrzane w przeglądarce (szerokość telefonu).
+- **Do sprawdzenia przy imporcie w eZUS**: plik z trzema dokumentami (ten sam punkt kontrolny co zwykły DRA, gdy przyjdzie miesiąc wakacji).
 
 ## Planowany układ plików
 

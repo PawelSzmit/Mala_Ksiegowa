@@ -6,6 +6,14 @@
 //   opodatkowanej wg skali: składki społeczne „finansowane przez ubezpieczonego” (IV p4, p5, p22, p23), zdrowotna VI p2,
 //   termin przysyłania 6 (do 20. dnia), kod tytułu ubezpieczenia 0510 0 0, blok XI p1–p4.
 // Nagłówka i cech dokumentu nie wypełnia się (robi to system ZUS). Plik niczego nie wysyła – w eZUS trafia do roboczych.
+//
+// Miesiąc wakacji składkowych – instrukcja ZUS „Jak wypełnić dokumenty rozliczeniowe, gdy uzyskasz zwolnienie z obowiązku
+// opłacenia składek za wybrany miesiąc” (grudzień 2024, przykład 1): zamiast samego DRA trzy dokumenty w jednym pliku:
+// - ZUS RCA z kodem 05 14 00: podstawy (III.B p4–p6) i składki społeczne „finansowane przez budżet państwa” (p15–p18), suma p29;
+// - ZUS RCA z kodem 05 10 00: tylko kod w III.B, zdrowotna w III.C (p1 podstawa, p4 kwota) i III.E (jak blok XI w DRA);
+// - ZUS DRA: w bloku IV te same składki jako finansowane przez budżet (p10–p12, p28–p30), do zapłaty 0 (p37),
+//   zdrowotna w VI, bez Funduszu Pracy (zwolnienie z FP przy opłacaniu tylko za siebie się nie wykazuje), bez bloków X i XI.
+// Kolejność pól i typy z kedu_5_7.xsd (t_RCA, t_DDORCA_B/C, t_ZDR), identyfikator ubezpieczonego „P” = PESEL (DRA_RCA.xml z BIP).
 import type { HealthContribution, SocialContributions } from '../rules/zus.ts';
 
 export const KEDU_NAMESPACE = 'http://www.zus.pl/2026/KEDU_5_7';
@@ -37,6 +45,11 @@ export interface DraInput {
   filledOn: string;
   /** Wersja programu w nagłówku KEDU. */
   programVersion?: string;
+  /**
+   * Miesiąc wakacji składkowych: składki społeczne, z których opłacenia ZUS zwolnił (finansuje je budżet państwa).
+   * Wtedy `social` musi być zerowe, a plik zawiera DRA i dwa raporty RCA.
+   */
+  exempt?: SocialContributions;
 }
 
 /** PESEL z poprawną cyfrą kontrolną. */
@@ -91,10 +104,32 @@ function checkPayer(p: DraPayer): void {
   if (problems.length) throw new Error(`Brak lub błędne dane płatnika do DRA: ${problems.join(', ')}`);
 }
 
-/** Plik KEDU z jedną deklaracją ZUS DRA za `month`/`year` (identyfikator 01 – deklaracja za miesiąc). */
+/**
+ * Plik KEDU za `month`/`year` (identyfikator 01 – deklaracja za miesiąc): sama deklaracja ZUS DRA,
+ * a w miesiącu wakacji składkowych (`exempt`) DRA i dwa raporty ZUS RCA.
+ */
 export function buildDraKedu(input: DraInput): string {
+  checkPayer(input.payer);
+  return keduFile(input, input.exempt ? holidayDocuments(input, input.exempt) : [`  <ZUSDRA id_dokumentu="1">\n${regularDra(input)}\n  </ZUSDRA>`]);
+}
+
+const rate = (bp: number) => `${Math.floor(bp / 100)}.${String(bp % 100).padStart(2, '0')}`;
+const period = (input: DraInput): Fields => [['p1', '01'], ['p2', `${input.year}-${String(input.month).padStart(2, '0')}`]];
+
+function payerBlock(payer: DraPayer): string {
+  return block('II', [
+    ['p1', payer.nip], ['p2', payer.regon || null], ['p3', payer.pesel], ['p6', payer.shortName || null],
+    ['p7', payer.lastName.trim().toUpperCase()], ['p8', payer.firstName.trim().toUpperCase()], ['p9', birthDateFromPesel(payer.pesel)],
+  ]);
+}
+
+/** Blok XI DRA / III.E RCA: forma opodatkowania (skala), dochód z poprzedniego miesiąca, podstawa i kwota zdrowotnej. */
+const healthInfo = (input: DraInput): Fields => [
+  ['p1', 'true'], ['p2', keduAmount(Math.max(0, input.previousMonthIncome))], ['p3', keduAmount(input.health.base)], ['p4', keduAmount(input.health.amount)],
+];
+
+function regularDra(input: DraInput): string {
   const { payer, social, health } = input;
-  checkPayer(payer);
   const pension = social.emerytalne + social.rentowe; // IV p3 i p6
   const sicknessAccident = social.chorobowe + social.wypadkowe; // IV p21 i p24
   const socialTotal = pension + sicknessAccident; // IV p37
@@ -103,13 +138,10 @@ export function buildDraKedu(input: DraInput): string {
   const a = keduAmount;
   const sickness = social.chorobowe > 0;
 
-  const dra = [
-    block('I', [['p1', '6'], ['p2', [['p1', '01'], ['p2', `${input.year}-${String(input.month).padStart(2, '0')}`]]]]),
-    block('II', [
-      ['p1', payer.nip], ['p2', payer.regon || null], ['p3', payer.pesel], ['p6', payer.shortName || null],
-      ['p7', payer.lastName.trim().toUpperCase()], ['p8', payer.firstName.trim().toUpperCase()], ['p9', birthDateFromPesel(payer.pesel)],
-    ]),
-    block('III', [['p1', '1'], ['p3', `${Math.floor(input.accidentRate / 100)}.${String(input.accidentRate % 100).padStart(2, '0')}`]]),
+  return [
+    block('I', [['p1', '6'], ['p2', period(input)]]),
+    payerBlock(payer),
+    block('III', [['p1', '1'], ['p3', rate(input.accidentRate)]]),
     block('IV', [
       ['p1', a(social.emerytalne)], ['p2', a(social.rentowe)], ['p3', a(pension)],
       ['p4', a(social.emerytalne)], ['p5', a(social.rentowe)], ['p6', a(pension)],
@@ -124,10 +156,66 @@ export function buildDraKedu(input: DraInput): string {
       ['p1', [['p1', '0510'], ['p2', '0'], ['p3', '0']]],
       ['p2', a(input.socialBase)], ['p3', sickness ? a(input.socialBase) : null], ['p4', a(input.socialBase)], ['p5', a(health.base)],
     ]),
-    block('XI', [['p1', 'true'], ['p2', a(Math.max(0, input.previousMonthIncome))], ['p3', a(health.base)], ['p4', a(health.amount)]]),
+    block('XI', healthInfo(input)),
+    block('XIII', [['p1', input.filledOn]]),
+  ].join('\n');
+}
+
+/** Miesiąc wakacji: DRA + RCA 05 14 (składki pokrywa budżet) + RCA 05 10 (zdrowotna). */
+function holidayDocuments(input: DraInput, exempt: SocialContributions): string[] {
+  const { payer, social, health } = input;
+  if (social.total !== 0) throw new Error('W miesiącu wakacji składki społeczne do zapłaty muszą być zerowe');
+  const pension = exempt.emerytalne + exempt.rentowe;
+  const sicknessAccident = exempt.chorobowe + exempt.wypadkowe;
+  if (pension + sicknessAccident !== exempt.deductible || exempt.deductible === 0) throw new Error('Niespójne składki objęte zwolnieniem');
+  const a = keduAmount;
+  const sickness = exempt.chorobowe > 0;
+  const base = a(input.socialBase);
+  const insured: Fields = [['p1', payer.lastName.trim().toUpperCase()], ['p2', payer.firstName.trim().toUpperCase()], ['p3', 'P'], ['p4', payer.pesel]];
+  const title = (code: string): Fields => [['p1', code], ['p2', '0'], ['p3', '0']];
+
+  const dra = [
+    block('I', [['p1', '6'], ['p2', period(input)]]),
+    payerBlock(payer),
+    block('III', [['p1', '1'], ['p3', rate(input.accidentRate)]]),
+    block('IV', [
+      ['p1', a(exempt.emerytalne)], ['p2', a(exempt.rentowe)], ['p3', a(pension)],
+      ['p10', a(exempt.emerytalne)], ['p11', a(exempt.rentowe)], ['p12', a(pension)],
+      ['p19', sickness ? a(exempt.chorobowe) : null], ['p20', a(exempt.wypadkowe)], ['p21', a(sicknessAccident)],
+      ['p28', sickness ? a(exempt.chorobowe) : null], ['p29', a(exempt.wypadkowe)], ['p30', a(sicknessAccident)],
+      ['p37', a(0)],
+    ]),
+    block('VI', [['p2', a(health.amount)], ['p5', a(health.amount)], ['p7', a(health.amount)]]),
+    block('IX', [['p2', a(health.amount)]]),
     block('XIII', [['p1', input.filledOn]]),
   ].join('\n');
 
+  const rca = (id: number, insuredBlocks: string) => `  <ZUSRCA id_dokumentu="${id}">
+${block('I', [['p1', period(input)]])}
+${payerBlock(payer)}
+    <III id_bloku="1">
+${block('A', insured, '      ')}
+${insuredBlocks}
+    </III>
+${block('IV', [['p1', input.filledOn]])}
+  </ZUSRCA>`;
+
+  const exemptRca = rca(2, block('B', [
+    ['p1', title('0514')],
+    ['p4', base], ['p5', sickness ? base : null], ['p6', base],
+    ['p15', a(exempt.emerytalne)], ['p16', a(exempt.rentowe)], ['p17', sickness ? a(exempt.chorobowe) : null], ['p18', a(exempt.wypadkowe)],
+    ['p29', a(exempt.deductible)],
+  ], '      '));
+  const healthRca = rca(3, [
+    block('B', [['p1', title('0510')]], '      '),
+    block('C', [['p1', a(health.base)], ['p4', a(health.amount)]], '      '),
+    block('E', healthInfo(input), '      '),
+  ].join('\n'));
+
+  return [`  <ZUSDRA id_dokumentu="1">\n${dra}\n  </ZUSDRA>`, exemptRca, healthRca];
+}
+
+function keduFile(input: DraInput, documents: string[]): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <KEDU wersja_schematu="1" xmlns="${KEDU_NAMESPACE}">
   <naglowek.KEDU>
@@ -138,9 +226,7 @@ export function buildDraKedu(input: DraInput): string {
     </program>
     <data_utworzenia_KEDU>${input.filledOn}</data_utworzenia_KEDU>
   </naglowek.KEDU>
-  <ZUSDRA id_dokumentu="1">
-${dra}
-  </ZUSDRA>
+${documents.join('\n')}
 </KEDU>
 `;
 }

@@ -121,9 +121,36 @@ function payerCard(v: PayerValues, error?: string, saved?: boolean): Html {
 </div>`;
 }
 
+export interface HolidayYear {
+  year: number;
+  month: number | null;
+}
+
+const HOLIDAY_MONTHS = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
+
+function holidayCard(years: HolidayYear[], error?: string, saved?: boolean): Html {
+  return html`<div class="card" id="wakacje">
+  <h1>Wakacje składkowe</h1>
+  ${errorBox(error)}
+  ${saved ? html`<p class="notice" role="status">Zapisano.</p>` : ''}
+  <p class="hint">Raz w roku możesz nie płacić składek społecznych i Funduszu Pracy za wybrany miesiąc (zdrowotną płacisz). Wniosek RWS składasz w eZUS w miesiącu przed wakacjami – aplikacja przypomni o nim na stronie tamtego miesiąca.</p>
+  ${years.map((y) => html`<form method="post" action="/ustawienia/wakacje" class="row">
+    <input type="hidden" name="year" value="${String(y.year)}">
+    <label for="holiday-${String(y.year)}">Rok ${String(y.year)}</label>
+    <select id="holiday-${String(y.year)}" name="month">
+      <option value="" ${y.month === null ? html`selected` : ''}>bez wakacji</option>
+      ${HOLIDAY_MONTHS.map((name, i) => html`<option value="${String(i + 1)}" ${y.month === i + 1 ? html`selected` : ''}>${name}</option>`)}
+    </select>
+    <button type="submit" class="secondary">Zapisz</button>
+  </form>`)}
+  <p class="hint">Zmiana jest możliwa, dopóki miesiąc wakacji i późniejsze miesiące nie są zamknięte.</p>
+</div>`;
+}
+
 export function settingsPage(p: {
   user: LayoutUser; values: SettingsValues; error?: string; saved?: boolean;
   payer: PayerValues; payerError?: string; payerSaved?: boolean;
+  holidays: HolidayYear[]; holidayError?: string; holidaySaved?: boolean;
 }): Html {
   const v = p.values;
   const env = (value: string, label: string) => html`<option value="${value}" ${v.ksef_env === value ? html`selected` : ''}>${label}</option>`;
@@ -147,7 +174,8 @@ export function settingsPage(p: {
     <button type="submit">Zapisz</button>
   </form>
 </div>
-${payerCard(p.payer, p.payerError, p.payerSaved)}`,
+${payerCard(p.payer, p.payerError, p.payerSaved)}
+${holidayCard(p.holidays, p.holidayError, p.holidaySaved)}`,
     p.user,
     'ustawienia',
   );

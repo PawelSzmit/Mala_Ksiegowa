@@ -87,6 +87,56 @@ describe('plik DRA dla eZUS (KEDU 5.7)', () => {
     assert.notDeepEqual(draSchemaErrors(xml.replace(/<I>[\s\S]*?<\/I>/, '')), []);
   });
 
+  // Instrukcja ZUS o wakacjach składkowych (grudzień 2024), przykład 1: podstawa 4694,40 zł, zwolnienie ze społecznych
+  // (z dobrowolnym chorobowym) i FP, zdrowotna minimalna 381,78 zł od podstawy 4242 zł, dochód z listopada 0 zł.
+  const ZERO_SOCIAL = { emerytalne: 0, rentowe: 0, wypadkowe: 0, chorobowe: 0, funduszPracy: 0, deductible: 0, total: 0 };
+  const exempt = (chorobowe: number) => {
+    const deductible = 91635 + 37555 + chorobowe + 7840;
+    return { emerytalne: 91635, rentowe: 37555, wypadkowe: 7840, chorobowe, funduszPracy: 11502, deductible, total: deductible + 11502 };
+  };
+  const holiday = (chorobowe: number) => input({
+    year: 2024, month: 12, socialBase: 469440, accidentRate: 167, social: ZERO_SOCIAL, exempt: exempt(chorobowe),
+    health: { base: 424200, minimumApplied: true, amount: 38178 }, previousMonthIncome: 0, filledOn: '2025-01-10',
+  });
+
+  it('miesiąc wakacji (przykład 1 z instrukcji ZUS): DRA + RCA 05 14 + RCA 05 10, kwoty jak w instrukcji', () => {
+    const xml = buildDraKedu(holiday(11501));
+    assert.deepEqual(draSchemaErrors(xml), []);
+    const v = (p: string) => draValue(xml, p);
+    assert.deepEqual([v('ZUSDRA/I/p2/p2'), v('ZUSDRA/III/p1'), v('ZUSDRA/III/p3')], ['2024-12', '1', '1.67']);
+    assert.deepEqual(['p1', 'p2', 'p3', 'p10', 'p11', 'p12'].map((p) => v(`ZUSDRA/IV/${p}`)), ['916.35', '375.55', '1291.90', '916.35', '375.55', '1291.90']);
+    assert.deepEqual(['p19', 'p20', 'p21', 'p28', 'p29', 'p30', 'p37'].map((p) => v(`ZUSDRA/IV/${p}`)), ['115.01', '78.40', '193.41', '115.01', '78.40', '193.41', '0.00']);
+    assert.deepEqual([v('ZUSDRA/IV/p4'), v('ZUSDRA/VII/p1'), v('ZUSDRA/X/p2'), v('ZUSDRA/XI/p1')], [undefined, undefined, undefined, undefined],
+      'bez składek „finansowanych przez ubezpieczonego”, bez FP i bez bloków X/XI (są raporty RCA)');
+    assert.deepEqual([v('ZUSDRA/VI/p2'), v('ZUSDRA/VI/p5'), v('ZUSDRA/VI/p7'), v('ZUSDRA/IX/p2')], ['381.78', '381.78', '381.78', '381.78']);
+
+    const exemptRca = (p: string) => v(`ZUSRCA[1]/${p}`);
+    assert.deepEqual([exemptRca('I/p1/p1'), exemptRca('I/p1/p2'), exemptRca('II/p3')], ['01', '2024-12', PESEL]);
+    assert.deepEqual(['p1', 'p2', 'p3', 'p4'].map((p) => exemptRca(`III/A/${p}`)), ['KOWALSKI', 'PAWEŁ', 'P', PESEL]);
+    assert.deepEqual([exemptRca('III/B/p1/p1'), exemptRca('III/B/p1/p2'), exemptRca('III/B/p1/p3')], ['0514', '0', '0']);
+    assert.deepEqual(['p4', 'p5', 'p6', 'p15', 'p16', 'p17', 'p18', 'p29'].map((p) => exemptRca(`III/B/${p}`)),
+      ['4694.40', '4694.40', '4694.40', '916.35', '375.55', '115.01', '78.40', '1485.31']);
+    assert.equal(exemptRca('III/C/p1'), undefined);
+
+    const healthRca = (p: string) => v(`ZUSRCA[2]/${p}`);
+    assert.deepEqual([healthRca('III/B/p1/p1'), healthRca('III/B/p4'), healthRca('III/C/p1'), healthRca('III/C/p4')], ['0510', undefined, '4242.00', '381.78']);
+    assert.deepEqual(['p1', 'p2', 'p3', 'p4'].map((p) => healthRca(`III/E/${p}`)), ['true', '0.00', '4242.00', '381.78']);
+    assert.equal(healthRca('IV/p1'), '2025-01-10');
+    assert.deepEqual([...xml.matchAll(/id_dokumentu="(\d)"/g)].map((m) => m[1]), ['1', '2', '3']);
+  });
+
+  it('miesiąc wakacji bez dobrowolnego chorobowego (jak Paweł): pola chorobowej puste, suma zwolnienia 1370,30 zł', () => {
+    const xml = buildDraKedu(holiday(0));
+    assert.deepEqual(draSchemaErrors(xml), []);
+    assert.deepEqual(['p19', 'p21', 'p28', 'p30'].map((p) => draValue(xml, `ZUSDRA/IV/${p}`)), [undefined, '78.40', undefined, '78.40']);
+    assert.deepEqual(['p5', 'p17', 'p29'].map((p) => draValue(xml, `ZUSRCA[1]/III/B/${p}`)), [undefined, undefined, '1370.30']);
+  });
+
+  it('miesiąc wakacji: nie powstanie plik, gdy składki do zapłaty nie są zerowe albo brak kwot zwolnienia', () => {
+    assert.throws(() => buildDraKedu({ ...holiday(0), social: socialContributions(config) }), /zerowe/);
+    assert.throws(() => buildDraKedu({ ...holiday(0), exempt: ZERO_SOCIAL }), /zwolnieniem/);
+  });
+
   it('kwoty w formacie KEDU', () => {
     assert.equal(keduAmount(0), '0.00');
     assert.equal(keduAmount(565200), '5652.00');

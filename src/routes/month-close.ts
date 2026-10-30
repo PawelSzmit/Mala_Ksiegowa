@@ -13,7 +13,9 @@ async function downloadDra(ctx: RouteContext, year: number, month: number) {
     'SELECT status, results FROM months WHERE year = $1 AND month = $2', [year, month],
   );
   if (m?.status !== 'closed' || !m.results) throw new HttpError(409, 'Plik DRA powstaje po zamknięciu miesiąca.');
-  if (m.results.result.holiday) throw new HttpError(409, 'Plik DRA dla miesiąca wakacji składkowych dojdzie w kolejnym etapie.');
+  if (m.results.result.holiday && !m.results.exemptSocial) {
+    throw new HttpError(409, 'Ten miesiąc wakacji zamknięto w starszej wersji aplikacji – otwórz go i zamknij ponownie, żeby powstał plik.');
+  }
   const payer = await loadPayer(ctx.db);
   const missing = payerProblems(payer);
   if (missing.length) throw new HttpError(409, `Uzupełnij w Ustawieniach dane do deklaracji ZUS: ${missing.join(', ')}.`);
@@ -21,6 +23,7 @@ async function downloadDra(ctx: RouteContext, year: number, month: number) {
   const xml = buildDraKedu({
     year, month, payer: toDraPayer(payer), socialBase: s.socialBase, accidentRate: s.accidentRate,
     social: s.result.socialDue, health: s.result.healthDue, previousMonthIncome: s.previousMonthIncome, filledOn: warsawToday(ctx.now()),
+    ...(s.result.holiday ? { exempt: s.exemptSocial } : {}),
   });
   send(ctx.res, 200, xml, 'application/xml; charset=utf-8', {
     'Content-Disposition': `attachment; filename="DRA-${year}-${String(month).padStart(2, '0')}.xml"`,

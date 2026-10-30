@@ -29,7 +29,9 @@ ${r.socialDue.chorobowe ? html`<div class="row"><span>Składka chorobowa</span><
 <div class="row"><span><strong>ZUS razem</strong> – zapłać do ${dueDate(year, month, ZUS_PAYMENT_DAY)}<br><span class="muted">jednym przelewem na Twój rachunek składkowy (ustawowy termin: ${dueDate(year, month, 20)})</span></span><strong>${pln(r.zusToPay)}</strong></div>
 <div class="row"><span><strong>Zaliczka na PIT</strong> – zapłać do ${dueDate(year, month, PIT_PAYMENT_DAY)}<br><span class="muted">na mikrorachunek podatkowy (PIT-36); dochód do opodatkowania od początku roku: ${pln(r.taxBase)}</span></span><strong>${pln(r.pitAdvance)}</strong></div>
 <div class="row"><span><strong>Razem do zapłaty</strong></span><strong>${pln(r.totalToPay)}</strong></div>
-${r.holiday ? html`<p class="warning">Miesiąc wakacji składkowych: składek społecznych i Funduszu Pracy nie płacisz, zdrowotną tak.</p>` : ''}`;
+${r.holiday ? html`<p class="warning">Miesiąc wakacji składkowych: składek społecznych i Funduszu Pracy nie płacisz, zdrowotną tak.${
+  s.exemptSocial ? ` Oszczędzasz ${pln(s.exemptSocial.total)} (społeczne ${pln(s.exemptSocial.deductible)} + Fundusz Pracy ${pln(s.exemptSocial.funduszPracy)}).` : ''
+}</p>` : ''}`;
 }
 
 function differences(now: SavedMonthResult, before: SavedMonthResult): Html | '' {
@@ -81,10 +83,10 @@ export function closedMonthCard(s: SavedMonthResult, year: number, month: number
   const base = `/miesiac/${year}/${mm(month)}`;
   return html`<div class="card"><h2>Do zapłaty</h2>${amountsTable(s, year, month)}
   ${s.warnings.length ? html`<ul class="hint">${s.warnings.map((w) => html`<li>${w}</li>`)}</ul>` : ''}
-  <div class="actions">${s.result.holiday
-    ? html`<span class="muted">Plik DRA dla miesiąca wakacji składkowych dojdzie w kolejnym etapie.</span>`
-    : html`<a class="button" href="${base}/dra.xml">Pobierz plik DRA</a>`}</div>
-  ${s.result.holiday ? '' : html`<p class="hint">W eZUS: ePłatnik → Dokumenty → Dokumenty ubezpieczeniowe → „Import KEDU”. Dokument trafi do roboczych; wysyłasz go dopiero po podpisaniu.</p>`}
+  <div class="actions"><a class="button" href="${base}/dra.xml">Pobierz plik DRA</a></div>
+  <p class="hint">W eZUS: ePłatnik → Dokumenty → Dokumenty ubezpieczeniowe → „Import KEDU”. ${s.result.holiday
+    ? 'W miesiącu wakacji plik zawiera trzy dokumenty: deklarację DRA i dwa raporty RCA (jeden ze składkami, które pokrywa budżet, drugi ze zdrowotną). Wszystkie trafią do roboczych; wysyłasz je razem po podpisaniu – bez nich ZUS nie rozliczy ulgi.'
+    : 'Dokument trafi do roboczych; wysyłasz go dopiero po podpisaniu.'}</p>
 </div>
 <div class="card">
   <h2>Otwórz ponownie</h2>

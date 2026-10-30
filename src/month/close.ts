@@ -7,6 +7,7 @@ import { HttpError } from '../http/http.ts';
 import { costBookingDate } from '../rules/booking.ts';
 import { loadYearConfig, type YearConfig } from '../rules/config.ts';
 import { computeYear, type YearMonthResult } from '../rules/year.ts';
+import { socialContributions, type SocialContributions } from '../rules/zus.ts';
 import { isValidPesel, type DraPayer } from '../zus/kedu-dra.ts';
 
 const MONTH_NAMES = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
@@ -27,6 +28,8 @@ export interface SavedMonthResult {
   socialBase: number;
   accidentRate: number;
   configStatus: YearConfig['status'];
+  /** Miesiąc wakacji składkowych: składki społeczne, z których ZUS zwalnia (pokrywa je budżet) – do raportu RCA 05 14. */
+  exemptSocial?: SocialContributions;
 }
 
 export interface MonthClosePreview extends SavedMonthResult {
@@ -163,6 +166,7 @@ export async function previewMonth(db: Queryable, year: number, month: number, n
     socialBase: config.social.base,
     accidentRate: config.social.rates.wypadkowe,
     configStatus: config.status,
+    ...(result.holiday ? { exemptSocial: socialContributions(config, { voluntarySickness: settings.rows[0]!.voluntary_sickness }) } : {}),
   };
 }
 
@@ -196,6 +200,7 @@ export async function closeMonth(db: Db, year: number, month: number, nowMs: num
     const saved: SavedMonthResult = {
       result: preview.result, warnings: preview.warnings, previousMonthIncome: preview.previousMonthIncome,
       socialBase: preview.socialBase, accidentRate: preview.accidentRate, configStatus: preview.configStatus,
+      ...(preview.exemptSocial ? { exemptSocial: preview.exemptSocial } : {}),
     };
     await tx.query("UPDATE months SET status = 'closed', results = $3, closed_at = $4 WHERE year = $1 AND month = $2",
       [year, month, JSON.stringify(saved), new Date(nowMs)]);
