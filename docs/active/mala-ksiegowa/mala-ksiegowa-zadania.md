@@ -168,7 +168,7 @@ Raport: `docs/active/mala-ksiegowa/review-faza-7.md`. Decyzja: gotowe do dalszej
 - [x] Subdomena + SSL (AutoSSL), baza `vh20129_ksiegowa`, użytkownik `vh20129_ksiegowa_app` (Claude za zgodą Pawła + skrypt setup-vh, 2026-10-30)
 - [x] Kod przez cPanel Git (gałąź `claude/project-thread-eptw6o`), aplikacja Node 24.22.1 Production, `.env`, migracje, konto `pawel` (2026-10-30; `/zdrowie` = ok, strona logowania działa)
 - [ ] Paweł loguje się pierwszy raz i uzupełnia Ustawienia (krok 10 VH-WDROZENIE) – przy okazji potwierdza sprawdzenie Origin/Host (review3 P3-3)
-- [ ] Wygenerowanie prawdziwego tokenu KSeF i wpisanie go w aplikacji (Paweł)
+- [x] Wygenerowanie prawdziwego tokenu KSeF i wpisanie go w aplikacji (Paweł, 2026-10-30)
 - [x] Zadanie cron codziennie 6:15 (`ksef-sync.ts`, log w `~/mala-ksiegowa-logs/ksef-sync.log`; do czasu tokenu loguje „pominięto”)
 - [x] JetBackup 5: codzienne kopie baz PostgreSQL (15 kopii) i katalogu domowego – nowa baza wejdzie do kopii od najbliższej nocy
 - [ ] Pierwsze zamknięcie prawdziwego miesiąca razem z Pawłem (Paweł)
