@@ -169,11 +169,15 @@ describe('zamknięcie miesiąca, ZUS i PIT', { skip: skipWithoutDb }, () => {
   it('styczeń: dochód z grudnia poprzedniego roku wpisany ręcznie jest podstawą zdrowotnej', async () => {
     nowMs = Date.parse('2027-02-04T10:00:00Z');
     await cash(2027, 1, '9 000');
+    // Zapis do księgi zakłada wiersz miesiąca, żeby zamykanie czekało na trwające zapisy (blokada wiersza).
+    assert.equal((await db.query("SELECT status FROM months WHERE year = 2027 AND month = 1")).rows[0]?.status, 'open');
     let page = await (await get('/miesiac/2027/01/zamkniecie')).text();
     assert.match(page, /Dochód z grudnia 2026/);
+    assert.match(page, /Wpisz dochód z grudnia 2026/);
     assert.equal((await post('/miesiac/2027/01/grudzien', { income: '10 000' })).status, 303);
     page = await (await get('/miesiac/2027/01/zamkniecie')).text();
     assert.doesNotMatch(page, /Dochód z grudnia 2026 \(zł\)/);
+    assert.doesNotMatch(page, /Wpisz dochód z grudnia/);
     assert.match(page, /9% dochodu z poprzedniego miesiąca \(10 000,00 zł\)[\s\S]*900,00 zł/);
   });
 

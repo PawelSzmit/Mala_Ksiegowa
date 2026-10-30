@@ -11,6 +11,8 @@ export const RECEIVED_DATE_SQL = "to_char(COALESCE(permanent_storage_date, creat
 export const periodOf = (isoDate: string) => ({ year: Number(isoDate.slice(0, 4)), month: Number(isoDate.slice(5, 7)) });
 
 export async function assertMonthOpen(db: Queryable, year: number, month: number): Promise<void> {
+  // Wiersz miesiąca musi istnieć, żeby blokada działała: zamykanie (INSERT … ON CONFLICT) czeka wtedy na koniec tego zapisu.
+  await db.query('INSERT INTO months (year, month) VALUES ($1, $2) ON CONFLICT DO NOTHING', [year, month]);
   // FOR SHARE: gdy właśnie trwa zamykanie tego miesiąca (FOR UPDATE), zapis czeka na jego koniec i dostaje „zamknięty”.
   const { rows } = await db.query<{ status: string }>('SELECT status FROM months WHERE year = $1 AND month = $2 FOR SHARE', [year, month]);
   if (rows[0]?.status === 'closed') {

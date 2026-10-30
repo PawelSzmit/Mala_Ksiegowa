@@ -182,6 +182,10 @@ export async function previewMonth(db: Queryable, year: number, month: number, n
     previousDecemberHealthIncome,
     voluntarySickness: s.voluntary_sickness,
   });
+  // Bez dochodu z grudnia zdrowotna za styczeń wyszłaby z minimum – zaniżona, jeśli grudzień był lepszy.
+  if (month === 1 && previousDecemberHealthIncome === undefined) {
+    blockers.push(`Wpisz dochód z grudnia ${year - 1} (pole poniżej) – od niego liczy się składka zdrowotna za styczeń.`);
+  }
   const result = computed.months[month - 1]!;
   const previousMonthIncome = month === 1 ? (previousDecemberHealthIncome ?? 0) : computed.months[month - 2]!.healthIncome;
 
