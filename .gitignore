@@ -3,3 +3,4 @@ node_modules/
 *.log
 *.tar.gz
 .ksef-test*.env
+dist/

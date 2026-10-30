@@ -65,6 +65,12 @@ describe('aplikacja: logowanie i dostęp', { skip: skipWithoutDb }, () => {
     assert.ok(!rows[0].totp_secret_enc.includes(SECRET));
   });
 
+  it('/zdrowie bez logowania: „ok”, gdy jest połączenie z bazą', async () => {
+    const res = await request('/zdrowie');
+    assert.equal(res.status, 200);
+    assert.equal(await res.text(), 'ok');
+  });
+
   it('bez sesji: strony przekierowują do logowania, a POST jest odrzucany', async () => {
     for (const path of ['/', '/miesiac/2026/10']) {
       const res = await request(path);

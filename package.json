@@ -14,9 +14,10 @@
     "ksef:test-token": "node scripts/ksef-test-token.ts",
     "ksef:test-invoice": "node scripts/ksef-test-invoice.ts",
     "start": "node server.mjs",
-    "migrate": "node scripts/migrate.ts",
-    "create-user": "node scripts/create-user.ts",
-    "sync": "node scripts/ksef-sync.ts"
+    "migrate": "node --env-file-if-exists=.env scripts/migrate.ts",
+    "create-user": "node --env-file-if-exists=.env scripts/create-user.ts",
+    "sync": "node --env-file-if-exists=.env scripts/ksef-sync.ts",
+    "package": "bash scripts/build-package.sh"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

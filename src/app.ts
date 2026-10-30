@@ -80,7 +80,15 @@ export function createApp(deps: AppDeps) {
     // --- strony bez logowania ---
     if (url.pathname === '/static/app.css') return send(res, 200, STYLES, 'text/css; charset=utf-8');
     if (url.pathname === '/static/app.js') return send(res, 200, SCRIPT, 'text/javascript; charset=utf-8');
-    if (url.pathname === '/zdrowie') return send(res, 200, 'ok', 'text/plain; charset=utf-8');
+    if (url.pathname === '/zdrowie') {
+      // Sprawdzenie po wdrożeniu i dla monitoringu: aplikacja działa i ma połączenie z bazą.
+      try {
+        await deps.db.query('SELECT 1');
+        return send(res, 200, 'ok', 'text/plain; charset=utf-8');
+      } catch {
+        return send(res, 503, 'brak połączenia z bazą', 'text/plain; charset=utf-8');
+      }
+    }
 
     if (url.pathname === '/logowanie') {
       if (method === 'GET') return send(res, 200, loginPage().value);
