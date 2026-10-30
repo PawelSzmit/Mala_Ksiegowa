@@ -23,6 +23,12 @@ export interface KpirEntryInput {
   otherCosts?: number;
   source: 'invoice' | 'manual_cost' | 'cash_report';
   sourceId: number;
+  /** Kolumna 3: numer faktury w KSeF. */
+  ksefNumber?: string | null;
+  /** Kolumna 5: identyfikator podatkowy kontrahenta z kodem kraju, np. PL5260250274. */
+  counterpartyTaxId?: string | null;
+  /** Kolumna 19: uwagi. */
+  notes?: string | null;
 }
 
 /** Wpis do księgi dla dokumentu; ponowny zapis tego samego dokumentu nadpisuje wpis zamiast tworzyć drugi. */
@@ -30,12 +36,15 @@ export async function upsertKpirEntry(db: Queryable, e: KpirEntryInput): Promise
   const { year, month } = periodOf(e.entryDate);
   await assertMonthOpen(db, year, month);
   await db.query(
-    `INSERT INTO kpir_entries (year, month, entry_date, document_number, counterparty, description, revenue, other_costs, source, source_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    `INSERT INTO kpir_entries (year, month, entry_date, document_number, counterparty, description, revenue, other_costs, source, source_id,
+       ksef_number, counterparty_tax_id, notes)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
      ON CONFLICT (source, source_id) DO UPDATE SET
        year = EXCLUDED.year, month = EXCLUDED.month, entry_date = EXCLUDED.entry_date, document_number = EXCLUDED.document_number,
-       counterparty = EXCLUDED.counterparty, description = EXCLUDED.description, revenue = EXCLUDED.revenue, other_costs = EXCLUDED.other_costs`,
-    [year, month, e.entryDate, e.documentNumber, e.counterparty, e.description, e.revenue ?? 0, e.otherCosts ?? 0, e.source, e.sourceId],
+       counterparty = EXCLUDED.counterparty, description = EXCLUDED.description, revenue = EXCLUDED.revenue, other_costs = EXCLUDED.other_costs,
+       ksef_number = EXCLUDED.ksef_number, counterparty_tax_id = EXCLUDED.counterparty_tax_id, notes = EXCLUDED.notes`,
+    [year, month, e.entryDate, e.documentNumber, e.counterparty, e.description, e.revenue ?? 0, e.otherCosts ?? 0, e.source, e.sourceId,
+      e.ksefNumber ?? null, e.counterpartyTaxId ?? null, e.notes ?? null],
   );
 }
 

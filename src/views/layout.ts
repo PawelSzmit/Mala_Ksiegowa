@@ -1,5 +1,9 @@
 import { html, type Html } from './html.ts';
 
+export const SCRIPT = `// Jedyny skrypt aplikacji: przycisk drukowania (CSP nie pozwala na skrypty w treści strony).
+document.querySelectorAll('[data-print]').forEach((b) => b.addEventListener('click', () => window.print()));
+`;
+
 export const STYLES = `
 :root { --bg: #f6f5f2; --card: #fff; --text: #1d1d1b; --muted: #6b6a66; --accent: #2f5d50; --danger: #a33a2b; --line: #e2e0da; }
 @media (prefers-color-scheme: dark) { :root { --bg: #171716; --card: #222220; --text: #ecebe7; --muted: #a3a29c; --accent: #7fb8a6; --danger: #e48a7c; --line: #34332f; } }
@@ -39,15 +43,46 @@ ul.items { margin: 8px 0 0; padding-left: 20px; }
 .actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 16px; }
 .actions button { margin-top: 0; }
 .actions a.button { display: inline-block; padding: 10px 16px; border-radius: 6px; background: var(--accent); color: #fff; text-decoration: none; }
+.table-wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
+main.wide { max-width: 1500px; }
+table.book { border-collapse: collapse; font-size: 13px; width: 100%; }
+table.book th, table.book td { border: 1px solid var(--line); padding: 4px 6px; vertical-align: top; }
+table.book th { font-weight: 600; font-size: 11px; background: var(--bg); }
+table.book tr.colnums th { font-weight: 400; color: var(--muted); }
+table.book td.amt { text-align: right; white-space: nowrap; }
+table.book td.num { text-align: right; }
+table.book td.ksef { font-size: 11px; word-break: break-all; min-width: 110px; }
+table.book tr.sum td { font-weight: 700; border-top: 2px solid var(--text); }
+table.book tr.sum-prev td { color: var(--muted); }
+table.book tr.sum-cum td { font-weight: 700; }
+table.book.summary { max-width: 900px; }
+.book-month { margin-bottom: 24px; }
+.book-title p { margin: 0 0 8px; }
+.print-only { display: none; }
+@media print {
+  @page { size: A4 landscape; margin: 8mm; }
+  body { background: #fff; color: #000; font-size: 9pt; }
+  header, nav.main, .no-print { display: none !important; }
+  .print-only { display: block; }
+  main, main.wide { max-width: none; margin: 0; padding: 0; }
+  .table-wrap { overflow: visible; border: 0; }
+  table.book { font-size: 7pt; }
+  table.book th { font-size: 6.5pt; background: #eee; }
+  table.book td.ksef { font-size: 6.5pt; min-width: 0; }
+  table.book th, table.book td { border-color: #555; padding: 2px 3px; }
+  .book-month { break-inside: auto; }
+  table.book thead { display: table-header-group; }
+  table.book tr { break-inside: avoid; }
+}
 .hint { font-size: 14px; color: var(--muted); margin: 4px 0 0; }
 .card > h2:first-child { margin-top: 0; }
 .row > strong, .row > span:last-child > strong { white-space: nowrap; padding-left: 12px; }
 `;
 
 export type LayoutUser = { username: string };
-type Section = 'miesiac' | 'faktury' | 'ustawienia';
+type Section = 'miesiac' | 'faktury' | 'ksiega' | 'ustawienia';
 
-export function layout(title: string, body: Html, user?: LayoutUser, active?: Section): Html {
+export function layout(title: string, body: Html, user?: LayoutUser, active?: Section, opts: { wide?: boolean } = {}): Html {
   const link = (href: string, label: string, section: Section) => html`<a href="${href}" class="${active === section ? 'active' : ''}">${label}</a>`;
   return html`<!doctype html>
 <html lang="pl">
@@ -62,8 +97,9 @@ export function layout(title: string, body: Html, user?: LayoutUser, active?: Se
   <strong>Mała Księgowa</strong>
   ${user ? html`<form method="post" action="/wyloguj"><span class="muted">${user.username}</span> · <button class="link" type="submit">Wyloguj</button></form>` : ''}
 </header>
-${user ? html`<nav class="main">${link('/', 'Miesiąc', 'miesiac')}${link('/faktury', 'Faktury', 'faktury')}${link('/ustawienia', 'Ustawienia', 'ustawienia')}</nav>` : ''}
-<main>${body}</main>
+${user ? html`<nav class="main">${link('/', 'Miesiąc', 'miesiac')}${link('/faktury', 'Faktury', 'faktury')}${link('/ksiega', 'Księga', 'ksiega')}${link('/ustawienia', 'Ustawienia', 'ustawienia')}</nav>` : ''}
+<main class="${opts.wide ? 'wide' : ''}">${body}</main>
+<script src="/static/app.js"></script>
 </body>
 </html>`;
 }

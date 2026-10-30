@@ -4,11 +4,14 @@ import { HttpError, readForm, redirect, send } from '../http/http.ts';
 import { parseAmountInput } from '../http/inputs.ts';
 import { syncKsef } from '../jobs/ksef-sync.ts';
 import type { FaItem } from '../ksef/parse-fa.ts';
+import { costBookingDate } from '../rules/booking.ts';
+import { amountInput, date } from '../views/format.ts';
 import { invoicesPage, type InvoiceRow } from '../views/invoices.ts';
 import { idFrom, loadSyncStatus, type Route, type RouteContext } from './context.ts';
 
 const COLUMNS = `id, ksef_number, invoice_number, seller_nip, seller_name, issue_date, gross_amount, currency, is_correction, corrected,
-  correction_reason, items, status, decided_at, xml IS NOT NULL AS has_xml, parse_error, pln_amount`;
+  correction_reason, items, status, decided_at, xml IS NOT NULL AS has_xml, parse_error, pln_amount,
+  to_char(COALESCE(permanent_storage_date, created_at) AT TIME ZONE 'Europe/Warsaw', 'YYYY-MM-DD') AS received_date`;
 
 async function renderList(ctx: RouteContext, notice?: { text: string; error?: boolean }, status = 200) {
   const [toReview, decided, sync] = await Promise.all([
@@ -40,14 +43,22 @@ async function decide(ctx: RouteContext, id: number) {
     let plnAmount: number | null = null;
     if (decision === 'cost') {
       if (inv.currency !== 'PLN') plnAmount = parseAmountInput(form.get('pln_amount') ?? undefined, `Kwota w zł (faktura w ${inv.currency})`);
+      const entryDate = costBookingDate(inv.issue_date, inv.received_date);
+      const notes = [
+        entryDate !== inv.issue_date ? `Faktura z ${date(inv.issue_date)}, otrzymana ${date(inv.received_date)}` : null,
+        plnAmount !== null ? `Faktura w ${inv.currency}: ${amountInput(inv.gross_amount)} ${inv.currency}` : null,
+      ].filter(Boolean).join('; ');
       await upsertKpirEntry(tx, {
-        entryDate: inv.issue_date,
+        entryDate,
         documentNumber: inv.invoice_number,
-        counterparty: [inv.seller_name, inv.seller_nip ? `NIP ${inv.seller_nip}` : null].filter(Boolean).join(', ') || null,
+        ksefNumber: inv.ksef_number,
+        counterparty: inv.seller_name ?? (inv.seller_nip ? `NIP ${inv.seller_nip}` : null),
+        counterpartyTaxId: inv.seller_nip ? `PL${inv.seller_nip}` : null,
         description: describe(inv),
         otherCosts: plnAmount ?? inv.gross_amount,
         source: 'invoice',
         sourceId: inv.id,
+        notes: notes || null,
       });
     }
     await tx.query('UPDATE invoices SET status = $2, decided_at = $3, pln_amount = $4 WHERE id = $1', [id, decision, new Date(ctx.now()), plnAmount]);

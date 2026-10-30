@@ -3,10 +3,11 @@ import { attemptLogin, LOCK_MINUTES } from './auth/login.ts';
 import { createSession, deleteSession, findSessionUser, SESSION_COOKIE, SESSION_HOURS } from './auth/sessions.ts';
 import type { Db } from './db/pool.ts';
 import { HttpError, isSameOrigin, parseCookies, readForm, redirect, send, sessionCookie } from './http/http.ts';
-import { STYLES } from './views/layout.ts';
+import { SCRIPT, STYLES } from './views/layout.ts';
 import { errorPage, loginPage, monthPage, type MonthEntry, type MonthView } from './views/pages.ts';
 import { currentMonth } from './dates.ts';
 import type { SyncOptions } from './jobs/ksef-sync.ts';
+import { bookRoute } from './routes/book.ts';
 import { cashRoute } from './routes/cash.ts';
 import { loadSyncStatus, type Route, type RouteContext } from './routes/context.ts';
 import { costsRoute } from './routes/costs.ts';
@@ -15,7 +16,7 @@ import { settingsRoute } from './routes/settings.ts';
 
 export { currentMonth };
 
-const ROUTES: Route[] = [invoicesRoute, costsRoute, cashRoute, settingsRoute];
+const ROUTES: Route[] = [invoicesRoute, costsRoute, cashRoute, bookRoute, settingsRoute];
 
 export interface AppDeps {
   db: Db;
@@ -63,6 +64,7 @@ export function createApp(deps: AppDeps) {
 
     // --- strony bez logowania ---
     if (url.pathname === '/static/app.css') return send(res, 200, STYLES, 'text/css; charset=utf-8');
+    if (url.pathname === '/static/app.js') return send(res, 200, SCRIPT, 'text/javascript; charset=utf-8');
     if (url.pathname === '/zdrowie') return send(res, 200, 'ok', 'text/plain; charset=utf-8');
 
     if (url.pathname === '/logowanie') {

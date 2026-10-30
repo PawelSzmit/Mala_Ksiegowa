@@ -7,6 +7,7 @@ const errorBox = (error?: string) => (error ? html`<p class="error" role="alert"
 
 export interface ManualCostValues {
   cost_date?: string;
+  received_date?: string;
   document_number?: string;
   counterparty?: string;
   description?: string;
@@ -24,6 +25,9 @@ export function manualCostPage(p: { user: LayoutUser; year: number; month: numbe
   <form method="post" action="/koszty" enctype="multipart/form-data">
     <label for="cost_date">Data wystawienia dokumentu</label>
     <input id="cost_date" name="cost_date" type="date" required value="${v.cost_date ?? ''}">
+    <label for="received_date">Data otrzymania (tylko jeśli inna niż wystawienia)</label>
+    <input id="received_date" name="received_date" type="date" value="${v.received_date ?? ''}">
+    <p class="hint">Dokument za poprzedni miesiąc otrzymany do 9. dnia trafia do poprzedniego miesiąca, otrzymany później – do miesiąca otrzymania.</p>
     <label for="document_number">Numer dokumentu</label>
     <input id="document_number" name="document_number" required maxlength="100" value="${v.document_number ?? ''}">
     <label for="counterparty">Sprzedawca (nazwa i ewentualnie NIP)</label>

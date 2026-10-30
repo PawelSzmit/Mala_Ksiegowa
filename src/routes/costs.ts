@@ -3,7 +3,8 @@ import { deleteKpirEntry, inTransaction, periodOf, upsertKpirEntry, assertMonthO
 import { HttpError, redirect, send } from '../http/http.ts';
 import { parseAmountInput, parseDateInput, requiredText, safeFilename, sniffFileType } from '../http/inputs.ts';
 import { readMultipart } from '../http/multipart.ts';
-import { monthHref } from '../views/format.ts';
+import { costBookingDate } from '../rules/booking.ts';
+import { date, monthHref } from '../views/format.ts';
 import { manualCostPage, type ManualCostValues } from '../views/forms.ts';
 import { currentMonth, warsawToday } from '../dates.ts';
 import { idFrom, type Route, type RouteContext } from './context.ts';
@@ -21,6 +22,9 @@ async function create(ctx: RouteContext) {
   const values: ManualCostValues = Object.fromEntries(form.fields);
   try {
     const costDate = parseDateInput(values.cost_date, 'Data wystawienia');
+    const receivedDate = values.received_date?.trim() ? parseDateInput(values.received_date, 'Data otrzymania') : costDate;
+    if (receivedDate < costDate) throw new HttpError(400, 'Data otrzymania: nie może być wcześniejsza niż data wystawienia');
+    const entryDate = costBookingDate(costDate, receivedDate);
     const documentNumber = requiredText(values.document_number, 'Numer dokumentu', 100);
     const counterparty = requiredText(values.counterparty, 'Sprzedawca');
     const description = requiredText(values.description, 'Czego dotyczy');
@@ -31,16 +35,19 @@ async function create(ctx: RouteContext) {
     if (file && !fileType) throw new HttpError(400, 'Załącznik: dozwolone są pliki PDF, JPG, PNG i HEIC');
 
     await inTransaction(ctx.db, async (tx) => {
-      const { year, month } = periodOf(costDate);
+      const { year, month } = periodOf(entryDate);
       await assertMonthOpen(tx, year, month);
       const { rows: [row] } = await tx.query<{ id: number }>(
-        `INSERT INTO manual_costs (cost_date, document_number, counterparty, description, amount, attachment_name, attachment, attachment_type)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-        [costDate, documentNumber, counterparty, description, amount, file ? safeFilename(file.filename) : null, file?.data ?? null, fileType],
+        `INSERT INTO manual_costs (cost_date, received_date, document_number, counterparty, description, amount, attachment_name, attachment, attachment_type)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+        [costDate, receivedDate, documentNumber, counterparty, description, amount, file ? safeFilename(file.filename) : null, file?.data ?? null, fileType],
       );
-      await upsertKpirEntry(tx, { entryDate: costDate, documentNumber, counterparty, description, otherCosts: amount, source: 'manual_cost', sourceId: row!.id });
+      await upsertKpirEntry(tx, {
+        entryDate, documentNumber, counterparty, description, otherCosts: amount, source: 'manual_cost', sourceId: row!.id,
+        notes: entryDate !== costDate ? `Dokument z ${date(costDate)}, otrzymany ${date(receivedDate)}` : null,
+      });
     });
-    const { year, month } = periodOf(costDate);
+    const { year, month } = periodOf(entryDate);
     redirect(ctx.res, monthHref(year, month));
   } catch (error) {
     if (!(error instanceof HttpError) || error.status === 413) throw error;
@@ -51,11 +58,13 @@ async function create(ctx: RouteContext) {
 
 async function remove(ctx: RouteContext, id: number) {
   const date = await inTransaction(ctx.db, async (tx) => {
-    const { rows: [cost] } = await tx.query<{ cost_date: string }>('SELECT cost_date FROM manual_costs WHERE id = $1 FOR UPDATE', [id]);
+    const { rows: [cost] } = await tx.query<{ entry_date: string | null }>(
+      `SELECT k.entry_date FROM manual_costs m LEFT JOIN kpir_entries k ON k.source = 'manual_cost' AND k.source_id = m.id WHERE m.id = $1 FOR UPDATE OF m`, [id],
+    );
     if (!cost) throw new HttpError(404, 'Nie ma takiego kosztu.');
     await deleteKpirEntry(tx, 'manual_cost', id);
     await tx.query('DELETE FROM manual_costs WHERE id = $1', [id]);
-    return cost.cost_date;
+    return cost.entry_date ?? warsawToday(ctx.now());
   });
   const { year, month } = periodOf(date);
   redirect(ctx.res, monthHref(year, month));

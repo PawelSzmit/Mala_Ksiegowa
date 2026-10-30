@@ -2,7 +2,7 @@
 
 Gałąź: `claude/project-thread-eptw6o` (kontynuacja `claude/project-thread-tqtl79`)
 Ostatnia aktualizacja: 2026-10-30
-Stan: Etapy 1–4 gotowe (KSeF, reguły, logowanie, faktury/koszty/kasa). Punkt kontrolny etapu 2 zaliczony 2026-10-30. Następny: etap 5 (księga KPiR).
+Stan: Etapy 1–5 gotowe (KSeF, reguły, logowanie, faktury/koszty/kasa, księga KPiR). Następny: etap 6 (zamknięcie miesiąca, ZUS, PIT).
 
 ## Kim jest użytkownik
 
@@ -156,6 +156,20 @@ Decyzje:
 - Trasy podzielone na `src/routes/{invoices,costs,cash,settings}.ts`; migracja `002_faktury_koszty_kasa.sql`.
 - Przy okazji poprawki z review: etap 3 (P2-1 blokada logowania odporna na równoległe próby, P2-2 zepsute ciasteczko, P3-4, P3-5), etap 2 (P2-2 ujemne koszty), etap 1 (P2-1, P2-2, P3-1, P3-2, P3-3).
 - Testy: `npm test` 66 bez bazy, 98 z `TEST_DATABASE_URL` (testy z bazą idą po kolei: `--test-concurrency=1`). Udawany KSeF w `test/helpers/fake-ksef.ts`.
+
+### Review etapu 4 (2026-10-30)
+- Raport: `review-faza-4.md`. Decyzja: **można iść dalej z zastrzeżeniami** (0×P1, 1×P2, 7×P3).
+- Najważniejsze: (1) data księgowania faktury kosztowej (wystawienia vs otrzymania w KSeF) do ustalenia z księgową przed etapem 6 – decyduje o fakturach, które przyjdą po zamknięciu miesiąca; (2) drobne: błąd 21183 tuż po północy, czytelniejsze komunikaty, faktury zaliczkowe bez oznaczenia.
+- Sprawdzone przy review: PDF z nagłówkiem `CSP: sandbox` wyświetla się w Chromium; za duży plik daje czytelny komunikat 413; KSeF odrzuca zapytanie z `from` po HWM kodem 21183.
+
+## Etap 5 – księga KPiR (2026-10-30)
+- **Wzór**: rozporządzenie MFiG z 6.09.2025 w sprawie prowadzenia podatkowej księgi przychodów i rozchodów, **Dz.U. 2025 poz. 1299**, obowiązuje od 1.01.2026 (tekst przeczytany w PDF z api.sejm.gov.pl przez przeglądarkę Pawła). 19 kolumn: 1 Lp., 2 data zdarzenia, 3 numer faktury w KSeF, 4 numer (innego) dowodu, 5 identyfikator podatkowy kontrahenta (z kodem kraju), 6 nazwa, 7 adres, 8 opis, 9 sprzedaż, 10 pozostałe przychody, 11 razem przychód, 12 zakup towarów, 13 koszty uboczne, 14 wynagrodzenia, 15 pozostałe wydatki, 16 razem wydatki, 17–18 B+R, 19 uwagi.
+  - Objaśnienia: przy identyfikatorze w kol. 5 kol. 6–7 można pominąć; przy raportach fiskalnych kol. 3–7 się nie wypełnia; raport miesięczny z kasy dozwolony (§ 12 ust. 2); po miesiącu suma kol. 9–16, opcjonalnie sumy od początku roku (pkt 19), inaczej zestawienie roczne (pkt 20); FP właściciela to „pozostałe wydatki” (kol. 15); księga tylko w postaci elektronicznej.
+- **Zasada Pawła (2026-10-30)**: PIT płaci 20., ZUS 10. dnia. Faktura za poprzedni miesiąc otrzymana do 9. dnia → poprzedni miesiąc (przeliczyć dochód i składki), po 9. → miesiąc otrzymania. „Otrzymana” = nadanie numeru KSeF; dla kosztów spoza KSeF – pole „data otrzymania” (domyślnie data wystawienia). `src/rules/booking.ts`; na liście faktur widać, do którego miesiąca trafi koszt i dlaczego; w uwagach (kol. 19) zapis „Faktura z …, otrzymana …”.
+- **Widok**: `/ksiega/RRRR` (miesiące do bieżącego + zestawienie), `/ksiega/RRRR/MM`; `src/rules/kpir-book.ts` (numeracja ciągła w roku po dacie, sumy miesiąca / do poprzedniego / od początku roku), `src/views/book.ts`, `src/routes/book.ts`, migracja `003_ksiega.sql` (ksef_number, counterparty_tax_id, notes w `kpir_entries`; received_date w `manual_costs`).
+- **Druk**: styl `@media print` (A4 poziomo, bez menu), przycisk „Drukuj / zapisz jako PDF” przez `/static/app.js` (CSP nie pozwala na skrypty w treści). Sprawdzone: przykładowy miesiąc mieści się na jednej stronie.
+- Decyzja: dla faktur z KSeF numer KSeF w kol. 3, kol. 4 pusta („innego numeru dowodu”), numer faktury w uwagach. Do potwierdzenia przy JPK_PKPIR (od 2028).
+- Testy: 73 bez bazy, 108 z bazą.
 
 ## Planowany układ plików
 

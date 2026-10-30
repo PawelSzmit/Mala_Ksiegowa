@@ -90,11 +90,28 @@ Stan (2026-10-30): gotowe. 98 testów zielonych; próba na prawdziwym testowym K
 ## Do sprawdzenia po etapie 4
 - [ ] Gdy treść faktury (XML) dotrze dopiero po decyzji „koszt firmy” i kwota z XML różni się od kwoty z listy KSeF, wpis w księdze się nie zmienia – rzadkie; ewentualnie dodać ostrzeżenie (Claude, etap 5)
 
+## Do poprawy po review fazy 4
+Raport: `review-faza-4.md`. Decyzja: można iść dalej z zastrzeżeniami (0×P1, 1×P2, 7×P3).
+- [x] P2-1 (Paweł 2026-10-30: do 9. dnia → poprzedni miesiąc, później → bieżący; zrobione w etapie 5): ustalić z księgową, pod jaką datą księgować fakturę kosztową (wystawienia czy otrzymania = nadania numeru KSeF); od tego zależy, co się dzieje z fakturą, która przyjdzie po zamknięciu miesiąca (Paweł + księgowa, przed etapem 6)
+- [ ] P3-1: błąd KSeF 21183 (start okna po znaczniku kompletności) traktować jak „brak nowych faktur” (Claude)
+- [ ] P3-2: komunikat „wpisz token ponownie” po zmianie klucza szyfrowania; błąd sieci rozpoznawany precyzyjniej (Claude)
+- [ ] P3-3: za duży plik – powrót do formularza z wpisanymi danymi (Claude)
+- [ ] P3-4: oznaczenie faktur zaliczkowych/rozliczeniowych + zasada księgowania do potwierdzenia z księgową (Claude + Paweł)
+- [ ] P3-6: testy: okno 90 dni i wznowienie po 5 oknach, HEIC, limit 8 MB (Claude)
+- [ ] P3-7: w instrukcji wdrożenia – startujemy z pustą bazą (faktury testowe nie mieszają się z prawdziwymi) (Claude, etap 8)
+
 ## Etap 5. Księga KPiR
-- [ ] Sprawdzić aktualny wzór kolumn KPiR (Claude)
-- [ ] Widok miesiąca i roku z numeracją i sumami (Claude)
-- [ ] Styl do druku / zapis jako PDF (Claude)
-- [ ] Testy: ciągła numeracja, sumy narastające (Claude)
+Stan (2026-10-30): gotowe. 108 testów zielonych; wydruk miesiąca mieści się na 1 stronie A4 poziomo.
+- [x] Zasada Pawła: faktura za poprzedni miesiąc otrzymana do 9. dnia → poprzedni miesiąc, później → miesiąc otrzymania (`src/rules/booking.ts`) (Claude)
+- [x] Sprawdzić aktualny wzór kolumn KPiR (Claude) → Dz.U. 2025 poz. 1299, 19 kolumn, od 1.01.2026
+- [x] Widok miesiąca i roku z numeracją i sumami (Claude)
+- [x] Styl do druku / zapis jako PDF (Claude)
+- [x] Testy: ciągła numeracja, sumy narastające (Claude)
+
+## Do zrobienia w etapie 6 (z etapu 5)
+- [ ] Faktura za poprzedni miesiąc, która przyjdzie do 9. dnia, gdy poprzedni miesiąc jest już zamknięty: zaproponować ponowne otwarcie i przeliczenie dochodu i składek (Claude, etap 6)
+- [ ] Fundusz Pracy jako wpis w kol. 15 księgi (`source = 'fp'`) przy zamknięciu miesiąca (Claude, etap 6)
+- [ ] Imię i nazwisko (i ewentualnie adres) w ustawieniach – nagłówek księgi i plik DRA (Claude, etap 6)
 
 ## Etap 6. Zamknięcie miesiąca, ZUS, PIT
 - [ ] Pobrać aktualny opis struktury KEDU z zus.pl (Claude)

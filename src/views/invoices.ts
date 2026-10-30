@@ -1,4 +1,5 @@
 import type { FaCorrected, FaItem } from '../ksef/parse-fa.ts';
+import { costBookingDate, LATE_INVOICE_LAST_DAY } from '../rules/booking.ts';
 import { html, type Html } from './html.ts';
 import { layout, type LayoutUser } from './layout.ts';
 import { amountInput, date, dateTime, monthHref, pln } from './format.ts';
@@ -21,6 +22,8 @@ export interface InvoiceRow {
   has_xml: boolean;
   parse_error: string | null;
   pln_amount: number | null;
+  /** Dzień otrzymania (nadania numeru KSeF), czas polski. */
+  received_date: string;
 }
 
 export interface SyncStatus {
@@ -62,12 +65,28 @@ function correctionInfo(inv: InvoiceRow): Html | string {
   } Kwota to różnica wynikająca z korekty${inv.gross_amount < 0 ? ' – zmniejszy koszty' : ''}.</p>`;
 }
 
+const MONTHS = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
+
+/** Gdzie trafi koszt – szczególnie ważne przy fakturach, które przyszły w kolejnym miesiącu. */
+function bookingInfo(inv: InvoiceRow): Html {
+  const booked = costBookingDate(inv.issue_date, inv.received_date);
+  const month = `${MONTHS[Number(booked.slice(5, 7)) - 1]} ${booked.slice(0, 4)}`;
+  if (booked === inv.issue_date && inv.received_date.slice(0, 7) === inv.issue_date.slice(0, 7)) {
+    return html`<p class="muted">Koszt trafi do księgi: ${month}.</p>`;
+  }
+  const why = booked === inv.issue_date
+    ? `przyszła ${date(inv.received_date)}, czyli do ${LATE_INVOICE_LAST_DAY}. dnia – zalicza się do miesiąca wystawienia (trzeba będzie przeliczyć ten miesiąc)`
+    : `przyszła ${date(inv.received_date)}, czyli po ${LATE_INVOICE_LAST_DAY}. dniu – koszt przechodzi na miesiąc otrzymania`;
+  return html`<p class="warning">Koszt trafi do księgi: <strong>${month}</strong> (faktura ${why}).</p>`;
+}
+
 function invoiceCard(inv: InvoiceRow): Html {
   const foreign = inv.currency !== 'PLN';
   return html`<div class="card invoice">
   <div class="row"><strong>${inv.invoice_number}</strong><strong>${foreign ? `${amountInput(inv.gross_amount)} ${inv.currency}` : pln(inv.gross_amount)}</strong></div>
   <p>${sellerLine(inv)}<br><span class="muted">Wystawiona ${date(inv.issue_date)} · nr KSeF ${inv.ksef_number}</span></p>
   ${correctionInfo(inv)}
+  ${bookingInfo(inv)}
   ${!inv.has_xml ? html`<p class="muted">Treść faktury jeszcze niepobrana – kwota z listy KSeF.</p>` : ''}
   ${inv.parse_error ? html`<p class="muted">Nie udało się odczytać szczegółów faktury (${inv.parse_error}).</p>` : ''}
   ${itemsList(inv.items)}

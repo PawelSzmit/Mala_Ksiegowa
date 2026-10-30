@@ -94,6 +94,7 @@ ${view.invoicesToReview ? html`<div class="card notice">Faktury z KSeF do przejr
   ${costs.length ? html`<div class="row"><span>Razem</span><strong>${pln(totalCosts)}</strong></div>` : ''}
   ${open ? html`<div class="actions"><a class="button" href="/koszty/nowy?miesiac=${view.year}-${mm}">Dodaj koszt spoza KSeF</a></div>` : ''}
 </div>
+<div class="card"><a href="/ksiega/${view.year}/${mm}">Zobacz zapisy tego miesiąca w księdze (KPiR) →</a></div>
 ${syncStatusBox(view.sync, false)}
 <div class="card">
   <button type="button" disabled title="Dostępne w kolejnych etapach">Zamknij miesiąc</button>

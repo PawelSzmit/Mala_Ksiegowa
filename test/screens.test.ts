@@ -172,6 +172,58 @@ describe('ekrany: faktury, koszty, kasa, ustawienia', { skip: skipWithoutDb }, (
     assert.match(await (await get('/miesiac/2026/10')).text(), /Raport z kasy<\/span><strong>8 500,00 zł/);
   });
 
+  it('faktura za poprzedni miesiąc: do 9. dnia zostaje w poprzednim miesiącu, po 9. przechodzi na miesiąc otrzymania', async () => {
+    const early = await addInvoice({ invoice_number: 'FV/WCZ', issue_date: '2026-09-29' });
+    await db.query("UPDATE invoices SET permanent_storage_date = '2026-10-09T10:00:00+02:00' WHERE id = $1", [early]);
+    const late = await addInvoice({ invoice_number: 'FV/POZ', issue_date: '2026-09-29' });
+    await db.query("UPDATE invoices SET permanent_storage_date = '2026-10-10T10:00:00+02:00' WHERE id = $1", [late]);
+    const list = await (await get('/faktury')).text();
+    assert.match(list, /FV\/WCZ[\s\S]*Koszt trafi do księgi: <strong>wrzesień 2026[\s\S]*do 9. dnia/);
+    assert.match(list, /FV\/POZ[\s\S]*Koszt trafi do księgi: <strong>październik 2026[\s\S]*po 9. dniu/);
+    await post(`/faktury/${early}/decyzja`, { decision: 'cost' });
+    await post(`/faktury/${late}/decyzja`, { decision: 'cost' });
+    const rows = (await db.query('SELECT document_number, month, entry_date, notes, ksef_number, counterparty_tax_id FROM kpir_entries ORDER BY id')).rows;
+    assert.deepEqual(rows.map((r) => [r.document_number, r.month, r.entry_date]), [['FV/WCZ', 9, '2026-09-29'], ['FV/POZ', 10, '2026-10-10']]);
+    assert.equal(rows[1].notes, 'Faktura z 29.09.2026, otrzymana 10.10.2026');
+    assert.equal(rows[0].counterparty_tax_id, 'PL5260250274');
+    assert.ok(rows[0].ksef_number);
+  });
+
+  it('koszt spoza KSeF z datą otrzymania: ta sama zasada 9. dnia', async () => {
+    await postFile('/koszty', { cost_date: '2026-09-28', received_date: '2026-10-15', document_number: 'R/1', counterparty: 'Firma DE', description: 'Licencja', amount: '50' });
+    const [e] = await entries();
+    assert.deepEqual([e.month, e.entry_date], [10, '2026-10-15']);
+    const bad = await postFile('/koszty', { cost_date: '2026-09-28', received_date: '2026-09-01', document_number: 'R/2', counterparty: 'X', description: 'Y', amount: '5' });
+    assert.match(await bad.text(), /nie może być wcześniejsza/);
+  });
+
+  it('księga: 19 kolumn wg wzoru, ciągła numeracja, sumy miesiąca i od początku roku, przycisk druku', async () => {
+    const inv = await addInvoice({ issue_date: '2026-09-10' });
+    await db.query("UPDATE invoices SET permanent_storage_date = '2026-09-10T12:00:00Z' WHERE id = $1", [inv]);
+    await post(`/faktury/${inv}/decyzja`, { decision: 'cost' });
+    await postFile('/kasa/2026/09', { report_date: '2026-09-30', amount: '1000' });
+    await postFile('/kasa/2026/10', { report_date: '2026-10-31', amount: '2000' });
+    await postFile('/koszty', { cost_date: '2026-10-07', document_number: 'P/7', counterparty: 'Sklep', description: 'Toner', amount: '100' });
+
+    const month = await (await get('/ksiega/2026/10')).text();
+    assert.match(month, /numer identyfikujący fakturę w KSeF/);
+    assert.match(month, /identyfikator podatkowy/);
+    assert.match(month, /<tr class="colnums">(<th>\d+<\/th>){19}<\/tr>/);
+    assert.match(month, /<td class="num">3<\/td><td>07\.10\.2026<\/td>/, 'numeracja ciągła od września');
+    assert.match(month, /Razem październik[\s\S]*?2\u00a0000,00/);
+    assert.match(month, /Od początku roku do końca poprzedniego miesiąca<\/td>\s*<td class="amt">1\u00a0000,00/);
+    assert.match(month, /Od początku roku<\/td>\s*<td class="amt">3\u00a0000,00/);
+    assert.match(month, /data-print/);
+    assert.match(month, /<script src="\/static\/app.js"><\/script>/);
+
+    const year = await (await get('/ksiega/2026')).text();
+    assert.match(year, /Wrzesień 2026[\s\S]*Październik 2026[\s\S]*Zestawienie od początku roku 2026/);
+    assert.match(year, /<td>FV\/1\/2026<\/td>|nr faktury: FV\/1\/2026/);
+    assert.match(await (await get('/static/app.js')).text(), /window.print/);
+    assert.equal((await get('/ksiega')).headers.get('location'), '/ksiega/2026');
+    assert.equal((await get('/ksiega/2026/13')).status, 404);
+  });
+
   it('ustawienia: sprawdzony NIP, token zaszyfrowany i nigdy niepokazywany, zmiana daty zaczyna pobieranie od nowa', async () => {
     const badNip = await post('/ustawienia', { nip: '1234567890', ksef_env: 'test', ksef_sync_from: '2026-10-01', ksef_token: 'tok' });
     assert.equal(badNip.status, 400);
