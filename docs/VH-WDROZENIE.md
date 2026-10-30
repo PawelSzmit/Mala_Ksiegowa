@@ -33,13 +33,20 @@ Strona `za-horyzont.pl` i aplikacja gabinetu się przy tym nie zmieniają.
 4. Przypisz użytkownika do tej bazy z **wszystkimi prawami**, tylko do tej jednej bazy.
 5. Zapisz w menedżerze haseł pełną nazwę bazy, pełną nazwę użytkownika i hasło.
 
-## 3. Wgranie paczki
+## 3. Wgranie kodu
 
-1. Otwórz **„Menedżer plików”** i przejdź do `/home/vh20129`.
-2. Utwórz katalog `mala-ksiegowa-app` obok `public_html`, a **nie** w środku.
-3. Wejdź do niego, wgraj paczkę `tar.gz` i ją rozpakuj (prawy przycisk → „Extract”).
-4. Sprawdź, że bezpośrednio w `mala-ksiegowa-app` są: `server.mjs`, `package.json`, `src/`, `migrations/`, `config/`, `scripts/`, `docs/`.
-5. Usuń wgrany plik `tar.gz` z serwera. Oryginał zostaje na komputerze.
+**Sposób użyty przy wdrożeniu (30.10.2026): Git w cPanelu.** Repozytorium na GitHubie jest publiczne, więc serwer sam pobiera kod.
+
+1. Otwórz **„Git™ Version Control”** → „Create”.
+2. Ustaw adres `https://github.com/PawelSzmit/Mala_Ksiegowa.git` i ścieżkę `/home/vh20129/mala-ksiegowa-app`, czyli obok `public_html`, a **nie** w środku.
+3. Po sklonowaniu wejdź w „Manage” → „Basic Information” i wybierz gałąź `claude/project-thread-eptw6o`.
+4. Sprawdź, że w `mala-ksiegowa-app` są: `server.mjs`, `package.json`, `src/`, `migrations/`, `config/`, `scripts/`, `docs/`.
+
+**Sposób zapasowy: paczka `tar.gz`** (`npm run package`, np. gdy repozytorium przestanie być publiczne).
+
+1. W **„Menedżerze plików”** utwórz `/home/vh20129/mala-ksiegowa-app`.
+2. Wgraj do niego paczkę i ją rozpakuj (prawy przycisk → „Extract”).
+3. Usuń wgrany plik `tar.gz` z serwera. Oryginał zostaje na komputerze.
 
 ## 4. Aplikacja Node w cPanelu
 
@@ -166,10 +173,9 @@ Konto zakłada się tylko raz. Skrypt odmówi, jeśli konto już istnieje.
 
 ## Nowa wersja aplikacji (aktualizacja)
 
-1. W „Setup Node.js App” zatrzymaj aplikację (**Stop**).
-2. Wgraj nową paczkę do `mala-ksiegowa-app` i rozpakuj, nadpisując pliki. Plik `.env` zostaje, bo paczka go nie zawiera.
-3. W Terminalu: polecenie z kroku 4.4, potem `npm ci --omit=dev` i `npm run migrate`.
-4. Uruchom aplikację (**Start/Restart**) i sprawdź `/zdrowie`.
+1. **„Git™ Version Control”** → „Manage” przy `mala-ksiegowa-app` → zakładka „Pull or Deploy” → **„Update from Remote”**. Przy paczce: wgraj ją i rozpakuj, nadpisując pliki. Plik `.env` zostaje w obu przypadkach.
+2. W Terminalu: polecenie z kroku 4.4, potem `npm ci --omit=dev` i `npm run migrate`.
+3. W „Setup Node.js App” kliknij **Restart** i sprawdź `/zdrowie`.
 
 ## Gdy coś nie działa
 
