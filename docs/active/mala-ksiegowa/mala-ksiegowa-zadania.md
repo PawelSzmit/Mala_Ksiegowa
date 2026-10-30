@@ -49,14 +49,23 @@ Stan (2026-10-29): moduł reguł gotowy, 28 nowych testów zielonych. Czeka na p
 - [ ] Etap 5: Fundusz Pracy zapłacony w miesiącu ma się pojawić w KPiR jako koszt automatycznie (moduł reguł już go dolicza; nie wpisywać ręcznie, żeby nie liczyć podwójnie) (Claude)
 - [ ] Etap 6: zapisywać faktyczne daty i kwoty wpłat składek (domyślnie: składki za miesiąc płacone w następnym) (Claude)
 
+## Do poprawy po review fazy 2
+Raport: `docs/active/mala-ksiegowa/review-faza-2.md`. Decyzja: można iść dalej z zastrzeżeniami (0×P1, 2×P2, 6×P3).
+- [ ] P2-1: potwierdzić z księgową / kalkulatorem ZUS interpretację zdrowotnej po stracie i przy nadwyżce składek (przykład maj–lipiec); w razie różnicy poprawić `healthIncomes` (Paweł + Claude, punkt kontrolny etapu 2)
+- [ ] P2-2: dopuścić ujemne sumy miesięczne w `summarizeKpir` (faktury korygujące) + test (Claude, najpóźniej etap 4/5)
+- [ ] P3-3: sprawdzać rosnącą kolejność progów PIT w `validateYearConfig` + test (Claude)
+- [ ] P3-4: testy: wakacje w styczniu, ręczne `socialPaid`, kwoty 2027, chorobowe w `computeYear` (Claude)
+- [ ] P3-5: przy wdrożeniu sprawdzić ścieżkę do `config/years` (Claude, etap 8)
+- [ ] P3-2: jeśli stopa wypadkowa zmieni się od kwietnia – dodać do pliku ustawień stawkę „od kwietnia” (Claude, w razie potrzeby)
+
 ## Etap 3. Szkielet, baza, logowanie
-- [ ] `server.mjs` i serwer HTTP z szablonami stron (Claude)
-- [ ] Połączenie z PostgreSQL i system migracji (Claude)
-- [ ] Tabele: `users`, `settings`, `invoices`, `manual_costs`, `cash_reports`, `kpir_entries`, `months` (Claude)
-- [ ] Logowanie: hasło (hash) + kod TOTP, sesja w bezpiecznym ciasteczku, limit prób (Claude)
-- [ ] Skrypt zakładający pierwsze konto (Claude)
-- [ ] Szyfrowanie tokenu KSeF kluczem ze zmiennej środowiskowej (Claude)
-- [ ] Testy logowania i dostępu bez sesji (Claude)
+- [x] `server.mjs` i serwer HTTP z szablonami stron (Claude)
+- [x] Połączenie z PostgreSQL i system migracji (Claude)
+- [x] Tabele: `users`, `settings`, `invoices`, `manual_costs`, `cash_reports`, `kpir_entries`, `months` (Claude)
+- [x] Logowanie: hasło (hash) + kod TOTP, sesja w bezpiecznym ciasteczku, limit prób (Claude)
+- [x] Skrypt zakładający pierwsze konto (Claude)
+- [x] Szyfrowanie tokenu KSeF kluczem ze zmiennej środowiskowej (Claude)
+- [x] Testy logowania i dostępu bez sesji (Claude)
 
 ## Etap 4. Faktury, koszty, kasa
 - [ ] Odczyt XML faktury FA(3): dostawca, NIP, numer, numer KSeF, data, kwota brutto, pozycje (Claude)

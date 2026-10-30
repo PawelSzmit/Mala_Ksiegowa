@@ -12,10 +12,17 @@
     "typecheck": "tsc --noEmit",
     "ksef:spike": "node scripts/ksef-spike.ts",
     "ksef:test-token": "node scripts/ksef-test-token.ts",
-    "ksef:test-invoice": "node scripts/ksef-test-invoice.ts"
+    "ksef:test-invoice": "node scripts/ksef-test-invoice.ts",
+    "start": "node server.mjs",
+    "migrate": "node scripts/migrate.ts",
+    "create-user": "node scripts/create-user.ts"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "@types/pg": "^8.23.1",
     "typescript": "^5.9.0"
+  },
+  "dependencies": {
+    "pg": "^8.23.1"
   }
 }

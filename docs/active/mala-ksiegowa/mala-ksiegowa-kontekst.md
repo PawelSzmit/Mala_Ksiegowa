@@ -1,8 +1,8 @@
 # Mała Księgowa – kontekst
 
 Gałąź: `claude/project-thread-eptw6o` (kontynuacja `claude/project-thread-tqtl79`)
-Ostatnia aktualizacja: 2026-10-29
-Stan: Etap 1 prawie gotowy – próba na testowym KSeF udana (logowanie tokenem, lista faktur kosztowych, pobranie XML). Próba z serwera vh.pl też udana (2026-10-29). Zostało: decyzja go/no-go Pawła.
+Ostatnia aktualizacja: 2026-10-30
+Stan: Etapy 1–3 gotowe (KSeF, reguły podatkowe, szkielet z logowaniem). Etap 2 czeka na punkt kontrolny (sprawdzenie tabeli przykładów). Następny: etap 4 (faktury, koszty, kasa).
 
 ## Kim jest użytkownik
 
@@ -34,7 +34,7 @@ Paweł – właściciel firmy, nie programista. Komunikacja po polsku, prostym j
 | Decyzja | Dlaczego |
 |---|---|
 | Node.js 24 + TypeScript | Działa na tym hostingu; ten sam język i proces wdrożenia co strona gabinetu; `node:crypto` ma RSA-OAEP/SHA-256 i AES potrzebne w KSeF |
-| Strony HTML renderowane na serwerze (lekki framework typu Hono/Fastify), bez SPA | Kilka ekranów z formularzami – minimum ruchomych części |
+| Strony HTML renderowane na serwerze, wbudowany `node:http` bez frameworka (zmiana względem planu: Hono/Fastify), bez SPA | Kilka ekranów z formularzami; jedna zależność mniej do aktualizacji na hostingu |
 | PostgreSQL przez `pg` | Dostępny na hostingu, ten sam co w aplikacji gabinetu |
 | Kwoty w groszach (liczby całkowite) | Brak błędów zaokrągleń |
 | Własny cienki klient KSeF | Brak dojrzałej biblioteki w Node; wzorce do podejrzenia: `n1ebieski/ksef-php-client` (PHP), `ksef-client` (Python, PyPI) |
@@ -125,6 +125,18 @@ Decyzje:
 - Domyślnie składki za miesiąc M są płacone w M+1 (termin 20.) i wtedy odliczane; można podać faktyczne wpłaty (`socialPaid`).
 - Zdrowotna: dochód nie bywa ujemny; strata i nadwyżka składek przechodzą na kolejne miesiące (liczenie narastające). Dosłowne czytanie art. 81 ust. 2c pkt 4 („minus dochody za poprzednie miesiące” po odliczeniu składek) dodawałoby składki z powrotem – liczymy jak programy księgowe. Do potwierdzenia na punkcie kontrolnym; różnice wyrównuje i tak roczne rozliczenie zdrowotnej.
 - Wakacje: w tym miesiącu społeczne i FP = 0, zdrowotna normalnie; w następnym miesiącu nie ma czego odliczyć. Wniosek RWS w miesiącu poprzedzającym (`rwsApplicationMonth`).
+
+### Review etapu 2 (2026-10-30)
+- Raport: `review-faza-2.md`. Decyzja: **można iść dalej z zastrzeżeniami** (0×P1, 2×P2, 6×P3).
+- Najważniejsze: (1) interpretacja zdrowotnej po stracie/nadwyżce składek czeka na potwierdzenie księgowej; (2) ujemne koszty miesiąca (faktury korygujące) wywracają `summarizeKpir` – poprawić przed etapem 4/5.
+
+## Etap 3 – szkielet, baza, logowanie (2026-10-30)
+- Pliki: `server.mjs` → `src/server.ts` → `src/app.ts` (trasy), `src/http/http.ts` (ciasteczka, formularze do 16 KB, nagłówki bezpieczeństwa, sprawdzanie Origin), `src/views/` (HTML z automatycznym escapowaniem, CSS pod `/static/app.css`), `src/auth/` (hasło scrypt, TOTP RFC 6238, sesje 12 h, blokada po 5 błędach na 15 min, ochrona przed ponownym użyciem kodu), `src/crypto/secret-box.ts` (AES-256-GCM na token KSeF i sekret TOTP), `src/db/` (pula `pg`, migracje w transakcji z blokadą), `migrations/001_init.sql`.
+- Zmienne środowiskowe: `DATABASE_URL`, `APP_ENCRYPTION_KEY` (32 bajty base64, np. `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`), `COOKIE_SECURE` (domyślnie true; `false` tylko lokalnie bez https), `PORT`.
+- Polecenia: `npm run migrate`, `npm run create-user -- <login>` (tylko pierwsze konto; hasło ukryte, kod z telefonu sprawdzany przed zapisem), `npm start`.
+- Testy: `npm test` (48); z bazą `TEST_DATABASE_URL=postgres://… npm test` (57) – test aplikacji kasuje i odtwarza schemat bazy testowej, nigdy nie wskazywać bazy produkcyjnej.
+- Sprawdzone: 57/57, typecheck czysty; ręcznie: założenie konta skryptem (także przez potok), logowanie hasłem + kodem, strona miesiąca, wylogowanie.
+- Uwaga: utrata `APP_ENCRYPTION_KEY` = trzeba od nowa wpisać token KSeF i założyć konto (TOTP). Klucz trzymać tylko w zmiennych środowiskowych cPanelu.
 
 ## Planowany układ plików
 
