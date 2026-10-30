@@ -35,6 +35,18 @@ export function parseNip(value: string | undefined): string {
   return nip;
 }
 
+/**
+ * Identyfikator podatkowy kontrahenta z kodem kraju (kol. 5 KPiR): polski NIP (z sumą kontrolną) → „PL…”,
+ * zagraniczny numer VAT – dwie litery kraju i 2–12 znaków. Puste pole → null.
+ */
+export function parseTaxId(value: string | undefined): string | null {
+  const v = (value ?? '').replace(/[\s.-]/g, '').toUpperCase();
+  if (!v) return null;
+  if (/^(PL)?\d{10}$/.test(v)) return `PL${parseNip(v.replace(/^PL/, ''))}`;
+  if (/^[A-Z]{2}[0-9A-Z+*]{2,12}$/.test(v)) return v;
+  throw new HttpError(400, 'NIP / numer VAT: wpisz polski NIP albo numer VAT z kodem kraju');
+}
+
 export type FileKind = 'application/pdf' | 'image/jpeg' | 'image/png' | 'image/heic';
 
 /** Rodzaj pliku po jego zawartości (a nie po nazwie czy deklaracji przeglądarki). */

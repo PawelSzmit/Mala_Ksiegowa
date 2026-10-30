@@ -1,5 +1,5 @@
 // Faktury z KSeF: lista do przejrzenia, decyzja „koszt firmy / nie jest kosztem”, cofnięcie, „sprawdź teraz”.
-import { deleteKpirEntry, inTransaction, upsertKpirEntry } from '../db/books.ts';
+import { deleteKpirEntry, inTransaction, RECEIVED_DATE_SQL, upsertKpirEntry } from '../db/books.ts';
 import { HttpError, readForm, redirect, send } from '../http/http.ts';
 import { parseAmountInput } from '../http/inputs.ts';
 import { syncKsef } from '../jobs/ksef-sync.ts';
@@ -11,15 +11,16 @@ import { idFrom, loadSyncStatus, type Route, type RouteContext } from './context
 
 const COLUMNS = `id, ksef_number, invoice_number, seller_nip, seller_name, issue_date, gross_amount, currency, is_correction, corrected,
   correction_reason, items, status, decided_at, xml IS NOT NULL AS has_xml, parse_error, pln_amount,
-  to_char(COALESCE(permanent_storage_date, created_at) AT TIME ZONE 'Europe/Warsaw', 'YYYY-MM-DD') AS received_date`;
+  ${RECEIVED_DATE_SQL} AS received_date`;
 
 async function renderList(ctx: RouteContext, notice?: { text: string; error?: boolean }, status = 200) {
-  const [toReview, decided, sync] = await Promise.all([
+  const [toReview, decided, sync, closed] = await Promise.all([
     ctx.db.query<InvoiceRow>(`SELECT ${COLUMNS} FROM invoices WHERE status = 'to_review' ORDER BY issue_date, id`),
     ctx.db.query<InvoiceRow>(`SELECT ${COLUMNS} FROM invoices WHERE status <> 'to_review' ORDER BY decided_at DESC NULLS LAST, id DESC LIMIT 20`),
     loadSyncStatus(ctx.db),
+    ctx.db.query<{ ym: string }>("SELECT year || '-' || lpad(month::text, 2, '0') AS ym FROM months WHERE status = 'closed'"),
   ]);
-  send(ctx.res, status, invoicesPage({ user: ctx.user, toReview: toReview.rows, decided: decided.rows, sync, notice }).value);
+  send(ctx.res, status, invoicesPage({ user: ctx.user, toReview: toReview.rows, decided: decided.rows, sync, notice, closedMonths: closed.rows.map((r) => r.ym) }).value);
 }
 
 /** Opis wpisu w księdze: pozycje faktury (bez „stanu przed korektą”), a gdy ich brak – ogólny opis. */

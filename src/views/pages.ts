@@ -2,6 +2,8 @@ import { html, type Html } from './html.ts';
 import { layout } from './layout.ts';
 import { date, monthHref, pln } from './format.ts';
 import { syncStatusBox, type SyncStatus } from './invoices.ts';
+import type { SavedMonthResult } from '../month/close.ts';
+import { closedMonthCard } from './month-close.ts';
 
 export const MONTH_NAMES = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
 
@@ -45,6 +47,10 @@ export interface MonthView {
   cashReport: { amount: number; hasPhoto: boolean } | null;
   entries: MonthEntry[];
   sync: SyncStatus;
+  /** Wyliczenie zapisane przy zamknięciu (tylko zamknięty miesiąc). */
+  closed: SavedMonthResult | null;
+  /** Od 1. do 9. dnia: faktury za poprzedni miesiąc czekające na decyzję. */
+  pendingPrevious: { year: number; month: number; count: number } | null;
 }
 
 const shift = (year: number, month: number, delta: number) => {
@@ -82,6 +88,7 @@ export function monthPage(view: MonthView, user: { username: string }, notice?: 
   <span class="badge">${open ? 'Otwarty' : 'Zamknięty'}</span>
 </div>
 ${notice ? html`<div class="card notice" role="status">${notice}</div>` : ''}
+${view.pendingPrevious ? html`<div class="card error" role="alert"><strong>Faktury za ${MONTH_NAMES[view.pendingPrevious.month - 1]!.toLowerCase()} czekają na decyzję: ${view.pendingPrevious.count}.</strong> Przyszły do 9. dnia, więc należą do poprzedniego miesiąca – rozstrzygnij je przed zapłatą ZUS 10. i przed zamknięciem tamtego miesiąca. · <a href="/faktury">Przejrzyj</a></div>` : ''}
 ${view.invoicesToReview ? html`<div class="card notice">Faktury z KSeF do przejrzenia: <strong>${view.invoicesToReview}</strong> · <a href="/faktury">Przejrzyj</a></div>` : ''}
 <div class="card">
   <h2>Przychód</h2>
@@ -96,9 +103,10 @@ ${view.invoicesToReview ? html`<div class="card notice">Faktury z KSeF do przejr
 </div>
 <div class="card"><a href="/ksiega/${view.year}/${mm}">Zobacz zapisy tego miesiąca w księdze (KPiR) →</a></div>
 ${syncStatusBox(view.sync, false)}
-<div class="card">
-  <button type="button" disabled title="Dostępne w kolejnych etapach">Zamknij miesiąc</button>
-</div>`,
+${view.closed
+  ? closedMonthCard(view.closed, view.year, view.month)
+  : html`<div class="card"><div class="actions"><a class="button" href="/miesiac/${view.year}/${mm}/zamkniecie">Zamknij miesiąc</a></div>
+  <p class="hint">Najpierw zobaczysz kwoty ZUS i PIT do zapłaty; po zamknięciu pobierzesz plik DRA.</p></div>`}`,
     user,
     'miesiac',
   );

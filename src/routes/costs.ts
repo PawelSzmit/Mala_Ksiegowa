@@ -1,7 +1,7 @@
 // Koszty spoza KSeF: formularz z opcjonalnym skanem/PDF, usuwanie, pobranie załącznika.
 import { deleteKpirEntry, inTransaction, periodOf, upsertKpirEntry, assertMonthOpen } from '../db/books.ts';
 import { HttpError, redirect, send } from '../http/http.ts';
-import { parseAmountInput, parseDateInput, requiredText, safeFilename, sniffFileType } from '../http/inputs.ts';
+import { parseAmountInput, parseDateInput, parseTaxId, requiredText, safeFilename, sniffFileType } from '../http/inputs.ts';
 import { readMultipart } from '../http/multipart.ts';
 import { costBookingDate } from '../rules/booking.ts';
 import { date, monthHref } from '../views/format.ts';
@@ -27,6 +27,11 @@ async function create(ctx: RouteContext) {
     const entryDate = costBookingDate(costDate, receivedDate);
     const documentNumber = requiredText(values.document_number, 'Numer dokumentu', 100);
     const counterparty = requiredText(values.counterparty, 'Sprzedawca');
+    const counterpartyTaxId = parseTaxId(values.counterparty_tax_id);
+    const counterpartyAddress = values.counterparty_address?.trim()
+      ? requiredText(values.counterparty_address, 'Adres sprzedawcy')
+      : null;
+    if (!counterpartyTaxId && !counterpartyAddress) throw new HttpError(400, 'Adres sprzedawcy: wpisz adres albo NIP sprzedawcy');
     const description = requiredText(values.description, 'Czego dotyczy');
     const amount = parseAmountInput(values.amount, 'Kwota brutto');
     if (amount <= 0) throw new HttpError(400, 'Kwota brutto: musi być większa od zera');
@@ -38,12 +43,14 @@ async function create(ctx: RouteContext) {
       const { year, month } = periodOf(entryDate);
       await assertMonthOpen(tx, year, month);
       const { rows: [row] } = await tx.query<{ id: number }>(
-        `INSERT INTO manual_costs (cost_date, received_date, document_number, counterparty, description, amount, attachment_name, attachment, attachment_type)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-        [costDate, receivedDate, documentNumber, counterparty, description, amount, file ? safeFilename(file.filename) : null, file?.data ?? null, fileType],
+        `INSERT INTO manual_costs (cost_date, received_date, document_number, counterparty, description, amount, attachment_name, attachment, attachment_type,
+           counterparty_tax_id, counterparty_address)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
+        [costDate, receivedDate, documentNumber, counterparty, description, amount, file ? safeFilename(file.filename) : null, file?.data ?? null, fileType,
+          counterpartyTaxId, counterpartyAddress],
       );
       await upsertKpirEntry(tx, {
-        entryDate, documentNumber, counterparty, description, otherCosts: amount, source: 'manual_cost', sourceId: row!.id,
+        entryDate, documentNumber, counterparty, counterpartyTaxId, counterpartyAddress, description, otherCosts: amount, source: 'manual_cost', sourceId: row!.id,
         notes: entryDate !== costDate ? `Dokument z ${date(costDate)}, otrzymany ${date(receivedDate)}` : null,
       });
     });

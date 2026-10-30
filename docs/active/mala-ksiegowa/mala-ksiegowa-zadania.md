@@ -46,7 +46,7 @@ Stan (2026-10-29): moduł reguł gotowy, 28 nowych testów zielonych. Punkt kont
 - [x] Tabela przykładowych miesięcy: `docs/active/mala-ksiegowa/przyklad-wyliczen.md` (generuje `node scripts/rules-example.ts`) (Claude)
 - [x] **Punkt kontrolny** (2026-10-30: Paweł potwierdził, że wyliczenia są prawidłowe): Paweł lub jego księgowa sprawdza tabelę, zwłaszcza interpretację straty i nadwyżki składek w zdrowotnej (Claude → Paweł)
 - [ ] W grudniu 2026: potwierdzić podstawę składek 2027 (komunikat ZUS po budżecie) i skalę PIT 2027 (projekt 130 tys./24%/150 tys. w Sejmie); zmienić `status` w `2027.json` na „potwierdzone” (Claude)
-- [ ] Etap 5: Fundusz Pracy zapłacony w miesiącu ma się pojawić w KPiR jako koszt automatycznie (moduł reguł już go dolicza; nie wpisywać ręcznie, żeby nie liczyć podwójnie) (Claude)
+- [x] Etap 5: Fundusz Pracy zapłacony w miesiącu ma się pojawić w KPiR jako koszt automatycznie (moduł reguł już go dolicza; nie wpisywać ręcznie, żeby nie liczyć podwójnie) (Claude) → etap 6: wpis `source = 'fp'` przy zamknięciu, wyłączony z danych dla modułu reguł
 - [ ] Etap 6: zapisywać faktyczne daty i kwoty wpłat składek (domyślnie: składki za miesiąc płacone w następnym) (Claude)
 
 ## Do poprawy po review fazy 2
@@ -109,17 +109,29 @@ Stan (2026-10-30): gotowe. 108 testów zielonych; wydruk miesiąca mieści się 
 - [x] Testy: ciągła numeracja, sumy narastające (Claude)
 
 ## Do zrobienia w etapie 6 (z etapu 5)
-- [ ] Faktura za poprzedni miesiąc, która przyjdzie do 9. dnia, gdy poprzedni miesiąc jest już zamknięty: zaproponować ponowne otwarcie i przeliczenie dochodu i składek (Claude, etap 6)
-- [ ] Fundusz Pracy jako wpis w kol. 15 księgi (`source = 'fp'`) przy zamknięciu miesiąca (Claude, etap 6)
-- [ ] Imię i nazwisko (i ewentualnie adres) w ustawieniach – nagłówek księgi i plik DRA (Claude, etap 6)
+- [x] Faktura za poprzedni miesiąc, która przyjdzie do 9. dnia, gdy poprzedni miesiąc jest już zamknięty: zaproponować ponowne otwarcie i przeliczenie dochodu i składek (Claude, etap 6)
+- [x] Fundusz Pracy jako wpis w kol. 15 księgi (`source = 'fp'`) przy zamknięciu miesiąca (Claude, etap 6)
+- [x] Imię i nazwisko (i ewentualnie adres) w ustawieniach – nagłówek księgi i plik DRA (Claude, etap 6)
+
+## Do poprawy po review fazy 5
+Raport: `docs/active/mala-ksiegowa/review-faza-5.md`. Decyzja: można iść dalej z zastrzeżeniami (0×P1, 2×P2, 4×P3).
+- [x] P2-1: od 1. do 9. dnia ostrzeżenie o fakturach za poprzedni miesiąc czekających na decyzję; zamknięcie miesiąca blokuje/ostrzega, gdy czekają jego faktury; po zamknięciu wybór „otwórz ponownie i przelicz” (Claude, etap 6)
+- [x] P2-2: koszt ręczny – osobne pola „NIP / VAT UE (z kodem kraju)” i „Adres” (adres wymagany bez NIP-u), kol. 5 i 7 w księdze (Claude, etap 6)
+- [ ] P3-1: rozważyć zapis liczby porządkowej przy zamknięciu miesiąca, żeby spóźniona faktura nie zmieniała numerów w wydrukowanych miesiącach (Claude, odłożone – kolejność zamykania miesięcy po kolei ogranicza problem do ponownego otwarcia)
+- [ ] P3-2: log/ostrzeżenie, gdy KSeF nie poda daty trwałego zapisu (data otrzymania z chwili pobrania) (Claude, opcjonalnie)
+- [ ] P3-3: testy: komunikat „Koszt trafi do księgi” (do 9. i po 9.), usunięcie kosztu zaksięgowanego w innym miesiącu, strona roku bez zapisów (Claude)
+- [x] P3-4: imię i nazwisko w nagłówku księgi – patrz „Do zrobienia w etapie 6” (Claude, etap 6)
 
 ## Etap 6. Zamknięcie miesiąca, ZUS, PIT
-- [ ] Pobrać aktualny opis struktury KEDU z zus.pl (Claude)
-- [ ] `src/zus/kedu-dra.ts`: plik DRA z NIP i PESEL, walidacja względem schematu (Claude)
-- [ ] Ekran „zamknij miesiąc”: kwoty do zapłaty (ZUS, PIT), pobranie DRA (Claude)
-- [ ] Blokada zamkniętego miesiąca i „otwórz ponownie” z ostrzeżeniem (Claude)
-- [ ] Testy: zwykły miesiąc, minimum zdrowotnej, miesiąc wakacji, poprawność XML (Claude)
-- [ ] **Punkt kontrolny**: Paweł importuje plik w eZUS jako dokument roboczy (bez podpisywania) i potwierdza brak błędów krytycznych (Paweł)
+Stan (2026-10-30): gotowe poza punktem kontrolnym z Pawłem. 124 testy zielone (81 bez bazy).
+- [x] Pobrać aktualny opis struktury KEDU z zus.pl (Claude) → kedu_5_7.xsd + przykładowe DRA.xml + Załącznik 1 (BIP ZUS, EWD 2.27 od 25.04.2026) i poradnik „ZUS DRA. Jak wypełnić” (przykład maj 2026)
+- [x] `src/zus/kedu-dra.ts`: plik DRA z NIP i PESEL, walidacja względem schematu (Claude) → test sprawdza kolejność i typy pól przepisane z XSD (`test/helpers/dra-schema.ts`)
+- [x] Ekran „zamknij miesiąc”: kwoty do zapłaty (ZUS, PIT), pobranie DRA (Claude)
+- [x] Blokada zamkniętego miesiąca i „otwórz ponownie” z ostrzeżeniem (Claude)
+- [x] Testy: zwykły miesiąc, minimum zdrowotnej, poprawność XML (Claude); miesiąc wakacji → etap 7 (DRA dla wakacji jeszcze zablokowany)
+- [ ] **Punkt kontrolny**: Paweł importuje plik w eZUS jako dokument roboczy (bez podpisywania) i potwierdza brak błędów krytycznych (Paweł) – plik z prawdziwymi danymi powstanie po wdrożeniu (etap 8) albo wcześniej z lokalnie uruchomionej aplikacji
+- [ ] Decyzja Pawła: start księgi od stycznia 2027 (zalecane) czy od listopada 2026 (wtedy ekran „stan na start” ze stycznia–października) (Paweł)
+- [ ] Przed pierwszym prawdziwym DRA porównać z ePłatnikiem: czy eZUS przyjmuje plik bez REGON-u i nazwy skróconej (pola opcjonalne w schemacie) (Paweł/Claude)
 
 ## Etap 7. Wakacje składkowe
 - [ ] Potwierdzić postać DRA w miesiącu wakacji (Claude)

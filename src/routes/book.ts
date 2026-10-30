@@ -8,7 +8,7 @@ import type { Route, RouteContext } from './context.ts';
 async function load(ctx: RouteContext, year: number): Promise<{ entries: BookEntry[]; header: BookHeader }> {
   const [entries, settings] = await Promise.all([
     ctx.db.query<BookEntry>(
-      `SELECT id, month, entry_date, document_number, ksef_number, counterparty, counterparty_tax_id, description, revenue, other_costs, notes, source
+      `SELECT id, month, entry_date, document_number, ksef_number, counterparty, counterparty_tax_id, counterparty_address, description, revenue, other_costs, notes, source
        FROM kpir_entries WHERE year = $1`, [year],
     ),
     ctx.db.query<{ nip: string | null; owner: string | null }>(

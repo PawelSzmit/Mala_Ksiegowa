@@ -9,6 +9,7 @@ export interface BookEntry {
   ksef_number: string | null;
   counterparty: string | null;
   counterparty_tax_id: string | null;
+  counterparty_address: string | null;
   description: string;
   revenue: number;
   other_costs: number;

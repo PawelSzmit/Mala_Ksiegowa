@@ -25,7 +25,7 @@ describe('miesiąc kosztu (zasada Pawła: do 9. dnia → poprzedni miesiąc)', (
 
 const entry = (id: number, month: number, day: number, revenue: number, cost: number): BookEntry => ({
   id, month, entry_date: `2026-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`, document_number: `D/${id}`, ksef_number: null,
-  counterparty: null, counterparty_tax_id: null, description: 'x', revenue, other_costs: cost, notes: null, source: revenue ? 'cash_report' : 'invoice',
+  counterparty: null, counterparty_tax_id: null, counterparty_address: null, description: 'x', revenue, other_costs: cost, notes: null, source: revenue ? 'cash_report' : 'invoice',
 });
 
 describe('księga: numeracja i sumy (Dz.U. 2025 poz. 1299, objaśnienia pkt 2 i 19)', () => {

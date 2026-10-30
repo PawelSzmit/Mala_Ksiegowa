@@ -10,6 +10,8 @@ export interface ManualCostValues {
   received_date?: string;
   document_number?: string;
   counterparty?: string;
+  counterparty_tax_id?: string;
+  counterparty_address?: string;
   description?: string;
   amount?: string;
 }
@@ -30,8 +32,13 @@ export function manualCostPage(p: { user: LayoutUser; year: number; month: numbe
     <p class="hint">Dokument za poprzedni miesiąc otrzymany do 9. dnia trafia do poprzedniego miesiąca, otrzymany później – do miesiąca otrzymania.</p>
     <label for="document_number">Numer dokumentu</label>
     <input id="document_number" name="document_number" required maxlength="100" value="${v.document_number ?? ''}">
-    <label for="counterparty">Sprzedawca (nazwa i ewentualnie NIP)</label>
+    <label for="counterparty">Sprzedawca (nazwa)</label>
     <input id="counterparty" name="counterparty" required maxlength="200" value="${v.counterparty ?? ''}">
+    <label for="counterparty_tax_id">NIP sprzedawcy albo zagraniczny numer VAT (z kodem kraju, np. IE6388047V)</label>
+    <input id="counterparty_tax_id" name="counterparty_tax_id" maxlength="20" value="${v.counterparty_tax_id ?? ''}">
+    <label for="counterparty_address">Adres sprzedawcy (wymagany, gdy nie ma NIP-u)</label>
+    <input id="counterparty_address" name="counterparty_address" maxlength="200" value="${v.counterparty_address ?? ''}">
+    <p class="hint">Wzór księgi wymaga NIP-u kontrahenta albo jego nazwy i adresu.</p>
     <label for="description">Czego dotyczy</label>
     <input id="description" name="description" required maxlength="200" value="${v.description ?? ''}">
     <label for="amount">Kwota brutto (zł)</label>
@@ -84,7 +91,40 @@ export interface SettingsValues {
   hasToken: boolean;
 }
 
-export function settingsPage(p: { user: LayoutUser; values: SettingsValues; error?: string; saved?: boolean }): Html {
+export interface PayerValues {
+  first_name: string;
+  last_name: string;
+  pesel: string;
+  regon: string;
+  short_name: string;
+}
+
+function payerCard(v: PayerValues, error?: string, saved?: boolean): Html {
+  return html`<div class="card" id="dane">
+  <h1>Dane do deklaracji ZUS i księgi</h1>
+  ${errorBox(error)}
+  ${saved ? html`<p class="notice" role="status">Zapisano.</p>` : ''}
+  <form method="post" action="/ustawienia/dane">
+    <label for="first_name">Imię</label>
+    <input id="first_name" name="first_name" required maxlength="22" autocomplete="given-name" value="${v.first_name}">
+    <label for="last_name">Nazwisko</label>
+    <input id="last_name" name="last_name" required maxlength="31" autocomplete="family-name" value="${v.last_name}">
+    <label for="pesel">PESEL</label>
+    <input id="pesel" name="pesel" inputmode="numeric" required maxlength="11" value="${v.pesel}">
+    <label for="regon">REGON (jeśli masz)</label>
+    <input id="regon" name="regon" inputmode="numeric" maxlength="14" value="${v.regon}">
+    <label for="short_name">Nazwa skrócona firmy (jak w CEIDG, jeśli jest)</label>
+    <input id="short_name" name="short_name" maxlength="31" value="${v.short_name}">
+    <p class="hint">Te dane trafiają do pliku DRA (wraz z NIP-em z ustawień KSeF) i do nagłówka księgi.</p>
+    <button type="submit">Zapisz dane</button>
+  </form>
+</div>`;
+}
+
+export function settingsPage(p: {
+  user: LayoutUser; values: SettingsValues; error?: string; saved?: boolean;
+  payer: PayerValues; payerError?: string; payerSaved?: boolean;
+}): Html {
   const v = p.values;
   const env = (value: string, label: string) => html`<option value="${value}" ${v.ksef_env === value ? html`selected` : ''}>${label}</option>`;
   return layout(
@@ -106,7 +146,8 @@ export function settingsPage(p: { user: LayoutUser; values: SettingsValues; erro
     <select id="ksef_env" name="ksef_env">${env('prod', 'produkcyjne (prawdziwe faktury)')}${env('test', 'testowe')}${env('demo', 'demo')}</select>
     <button type="submit">Zapisz</button>
   </form>
-</div>`,
+</div>
+${payerCard(p.payer, p.payerError, p.payerSaved)}`,
     p.user,
     'ustawienia',
   );

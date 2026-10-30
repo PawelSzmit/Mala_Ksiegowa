@@ -121,14 +121,14 @@ describe('ekrany: faktury, koszty, kasa, ustawienia', { skip: skipWithoutDb }, (
     assert.equal(res.status, 409);
     assert.match(await res.text(), /zamknięty/);
     assert.equal((await db.query('SELECT status FROM invoices WHERE id = $1', [id])).rows[0].status, 'to_review');
-    const cost = await postFile('/koszty', { cost_date: '2026-10-07', document_number: 'P/1', counterparty: 'Sklep', description: 'Toner', amount: '10' });
+    const cost = await postFile('/koszty', { cost_date: '2026-10-07', document_number: 'P/1', counterparty: 'Sklep', counterparty_address: 'ul. Długa 1, Kraków', description: 'Toner', amount: '10' });
     assert.equal(cost.status, 409);
     assert.equal((await postFile('/kasa/2026/10', { report_date: '2026-10-31', amount: '100' })).status, 409);
     assert.deepEqual(await entries(), []);
   });
 
   it('koszt spoza KSeF z PDF: wpis w księdze, załącznik do pobrania w piaskownicy, usunięcie', async () => {
-    const res = await postFile('/koszty', { cost_date: '2026-10-07', document_number: 'P/7', counterparty: 'Sklep Papierniczy', description: 'Toner', amount: '1 234,56' }, { field: 'attachment', name: 'skan<1>.pdf', data: PDF });
+    const res = await postFile('/koszty', { cost_date: '2026-10-07', document_number: 'P/7', counterparty: 'Sklep Papierniczy', counterparty_tax_id: '526-025-02-74', description: 'Toner', amount: '1 234,56' }, { field: 'attachment', name: 'skan<1>.pdf', data: PDF });
     assert.equal(res.status, 303);
     assert.equal(res.headers.get('location'), '/miesiac/2026/10');
     const [e] = await entries();
@@ -146,12 +146,12 @@ describe('ekrany: faktury, koszty, kasa, ustawienia', { skip: skipWithoutDb }, (
   });
 
   it('koszt spoza KSeF: błędy formularza wracają z wpisanymi danymi; zły typ pliku odrzucony', async () => {
-    const bad = await postFile('/koszty', { cost_date: '2026-10-07', document_number: 'P/8', counterparty: 'Sklep', description: 'Toner', amount: 'dużo' });
+    const bad = await postFile('/koszty', { cost_date: '2026-10-07', document_number: 'P/8', counterparty: 'Sklep', counterparty_address: 'ul. Długa 1, Kraków', description: 'Toner', amount: 'dużo' });
     assert.equal(bad.status, 400);
     const html = await bad.text();
     assert.match(html, /Kwota brutto: wpisz kwotę/);
     assert.match(html, /value="P\/8"/);
-    const exe = await postFile('/koszty', { cost_date: '2026-10-07', document_number: 'P/9', counterparty: 'Sklep', description: 'Toner', amount: '5' }, { field: 'attachment', name: 'faktura.pdf', data: Buffer.from('<script>alert(1)</script>') });
+    const exe = await postFile('/koszty', { cost_date: '2026-10-07', document_number: 'P/9', counterparty: 'Sklep', counterparty_address: 'ul. Długa 1, Kraków', description: 'Toner', amount: '5' }, { field: 'attachment', name: 'faktura.pdf', data: Buffer.from('<script>alert(1)</script>') });
     assert.equal(exe.status, 400);
     assert.match(await exe.text(), /dozwolone są pliki PDF/);
     assert.deepEqual(await entries(), []);
@@ -190,10 +190,10 @@ describe('ekrany: faktury, koszty, kasa, ustawienia', { skip: skipWithoutDb }, (
   });
 
   it('koszt spoza KSeF z datą otrzymania: ta sama zasada 9. dnia', async () => {
-    await postFile('/koszty', { cost_date: '2026-09-28', received_date: '2026-10-15', document_number: 'R/1', counterparty: 'Firma DE', description: 'Licencja', amount: '50' });
+    await postFile('/koszty', { cost_date: '2026-09-28', received_date: '2026-10-15', document_number: 'R/1', counterparty: 'Firma DE', counterparty_tax_id: 'DE123456789', description: 'Licencja', amount: '50' });
     const [e] = await entries();
     assert.deepEqual([e.month, e.entry_date], [10, '2026-10-15']);
-    const bad = await postFile('/koszty', { cost_date: '2026-09-28', received_date: '2026-09-01', document_number: 'R/2', counterparty: 'X', description: 'Y', amount: '5' });
+    const bad = await postFile('/koszty', { cost_date: '2026-09-28', received_date: '2026-09-01', document_number: 'R/2', counterparty: 'X', counterparty_address: 'Y', description: 'Y', amount: '5' });
     assert.match(await bad.text(), /nie może być wcześniejsza/);
   });
 
@@ -203,7 +203,7 @@ describe('ekrany: faktury, koszty, kasa, ustawienia', { skip: skipWithoutDb }, (
     await post(`/faktury/${inv}/decyzja`, { decision: 'cost' });
     await postFile('/kasa/2026/09', { report_date: '2026-09-30', amount: '1000' });
     await postFile('/kasa/2026/10', { report_date: '2026-10-31', amount: '2000' });
-    await postFile('/koszty', { cost_date: '2026-10-07', document_number: 'P/7', counterparty: 'Sklep', description: 'Toner', amount: '100' });
+    await postFile('/koszty', { cost_date: '2026-10-07', document_number: 'P/7', counterparty: 'Sklep', counterparty_address: 'ul. Długa 1, Kraków', description: 'Toner', amount: '100' });
 
     const month = await (await get('/ksiega/2026/10')).text();
     assert.match(month, /numer identyfikujący fakturę w KSeF/);

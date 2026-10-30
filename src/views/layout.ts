@@ -77,6 +77,7 @@ table.book.summary { max-width: 900px; }
 .hint { font-size: 14px; color: var(--muted); margin: 4px 0 0; }
 .card > h2:first-child { margin-top: 0; }
 .row > strong, .row > span:last-child > strong { white-space: nowrap; padding-left: 12px; }
+.row > span.amount { white-space: nowrap; padding-left: 12px; }
 `;
 
 export type LayoutUser = { username: string };

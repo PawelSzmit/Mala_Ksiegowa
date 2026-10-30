@@ -2,7 +2,7 @@
 
 Gałąź: `claude/project-thread-eptw6o` (kontynuacja `claude/project-thread-tqtl79`)
 Ostatnia aktualizacja: 2026-10-30
-Stan: Etapy 1–5 gotowe (KSeF, reguły, logowanie, faktury/koszty/kasa, księga KPiR). Następny: etap 6 (zamknięcie miesiąca, ZUS, PIT).
+Stan: Etapy 1–6 gotowe (KSeF, reguły, logowanie, faktury/koszty/kasa, księga KPiR, zamknięcie miesiąca z DRA). Czeka: import DRA w eZUS przez Pawła, decyzja o miesiącu startu. Następny: etap 7 (wakacje składkowe).
 
 ## Kim jest użytkownik
 
@@ -170,6 +170,24 @@ Decyzje:
 - **Druk**: styl `@media print` (A4 poziomo, bez menu), przycisk „Drukuj / zapisz jako PDF” przez `/static/app.js` (CSP nie pozwala na skrypty w treści). Sprawdzone: przykładowy miesiąc mieści się na jednej stronie.
 - Decyzja: dla faktur z KSeF numer KSeF w kol. 3, kol. 4 pusta („innego numeru dowodu”), numer faktury w uwagach. Do potwierdzenia przy JPK_PKPIR (od 2028).
 - Testy: 73 bez bazy, 108 z bazą.
+
+- **Review etapu 5 (2026-10-30)**: można iść dalej z zastrzeżeniami (0×P1, 2×P2, 4×P3), raport `review-faza-5.md`. Najważniejsze: (1) faktura za poprzedni miesiąc rozstrzygnięta po 10. zmienia miesiąc już opłacony – etap 6 musi ostrzegać od 1. do 9. dnia i obsłużyć zamknięty miesiąc; (2) koszty ręczne nie mają osobno NIP-u i adresu kontrahenta (kol. 5 i 7 wzoru).
+
+## Etap 6 – zamknięcie miesiąca, ZUS, PIT (2026-10-30)
+- **Źródła DRA** (czytane przez przeglądarkę Pawła; sandbox nie ma dostępu do zus.pl): BIP ZUS → Wymagania dla oprogramowania interfejsowego → Dokumenty ubezpieczeniowe: specyfikacja EWD 2.27, schemat `kedu_5_7.xsd` (przestrzeń nazw `http://www.zus.pl/2026/KEDU_5_7`, ważny od 25.04.2026), zestaw danych testowych (DRA.xml), Załącznik nr 1 (opis pól DRA). Poradnik ZUS „ZUS DRA. Jak wypełnić i skorygować” (zus.pl/documents/10182/167567/poradnik+ZUS+DRA.pdf) – przykład za maj 2026, osoba płacąca tylko za siebie, skala.
+- **Pola DRA dla Pawła**: I p1=6 (do 20.), p2=01/RRRR-MM; II NIP, (REGON), PESEL, (nazwa skrócona), NAZWISKO, IMIĘ, data urodzenia z PESEL; III p1=1, p3=1.67; IV p1–p6 i p20,p21,p23,p24 (chorobowe p19/p22 tylko przy dobrowolnym), p37; VI p2,p5,p7 = zdrowotna; VII p1,p3 = FP+FS; IX p2 = razem; X kod 0510 0 0, podstawy (p3 tylko z chorobowym), p5 podstawa zdrowotnej; XI p1=true (skala), p2 dochód z poprzedniego miesiąca (≥0), p3 podstawa (przy minimum = płaca minimalna 4806 zł), p4 składka; XIII p1 data wypełnienia. Nagłówka i cech dokumentu nie wypełnia się. Składki samozatrudnionego są „finansowane przez ubezpieczonego”.
+- **Pomyłka w poradniku ZUS**: IX p2 podane jako 2826,77 zł, a suma jego pól to 2826,76 zł – trzymamy się sumy.
+- **Zamknięcie** (`src/month/close.ts`, `src/routes/month-close.ts`, `src/views/month-close.ts`, migracja `004_zamkniecie_miesiaca.sql`):
+  - miesiące roku zamyka się po kolei; miesiące bez żadnych zapisów są pomijane z ostrzeżeniem (liczone jak zero przychodu, ale z założeniem, że składki były płacone);
+  - przeszkody: brak raportu z kasy, faktury do decyzji należące do miesiąca (zasada 9. dnia), miesiąc jeszcze trwa, brak danych płatnika (NIP, PESEL z sumą kontrolną, imię, nazwisko);
+  - przy zamknięciu wpis FP do księgi (kol. 15, data 10. dnia – dzień płatności Pawła, kontrahent ZUS z adresem centrali ul. Szamocka 3, 5, 01-748 Warszawa), zapis wyniku w `months.results`;
+  - ponowne otwarcie tylko z potwierdzeniem i gdy późniejsze miesiące są otwarte; poprzedni wynik zostaje do porównania („kwoty zmieniły się…”);
+  - DRA (`/miesiac/RRRR/MM/dra.xml`) tylko dla zamkniętego miesiąca, z zapisanego wyniku i aktualnych danych płatnika; miesiąc wakacji – zablokowany do etapu 7;
+  - styczeń: gdy grudnia poprzedniego roku nie ma w aplikacji, pole „dochód z grudnia” (`years.previous_december_income`).
+- **Terminy na ekranie**: ZUS do 10. (dzień Pawła; ustawowo 20.), PIT do 20. następnego miesiąca.
+- **Z review 5**: ostrzeżenie na stronie bieżącego miesiąca od 1. do 9. dnia o fakturach za poprzedni miesiąc; karta faktury mówi, gdy jej miesiąc jest zamknięty (link do otwarcia); koszt spoza KSeF z NIP/VAT UE (`parseTaxId`) albo adresem (kol. 5 i 7); dane płatnika w Ustawieniach (`/ustawienia/dane`).
+- **Otwarte**: Paweł importuje DRA w eZUS (punkt kontrolny); decyzja o starcie (styczeń 2027 zalecany – PIT i zdrowotna narastają od stycznia, start w trakcie roku wymagałby „stanu na start”).
+- Testy: `test/zus/dra.test.ts` (przykład ZUS co do grosza, schemat, PESEL), `test/month-close.test.ts` (8 scenariuszy przez HTTP). 124 z bazą, 81 bez.
 
 ## Planowany układ plików
 

@@ -5,18 +5,21 @@ import type { Db } from './db/pool.ts';
 import { HttpError, isSameOrigin, parseCookies, readForm, redirect, send, sessionCookie } from './http/http.ts';
 import { SCRIPT, STYLES } from './views/layout.ts';
 import { errorPage, loginPage, monthPage, type MonthEntry, type MonthView } from './views/pages.ts';
-import { currentMonth } from './dates.ts';
+import { currentMonth, warsawToday } from './dates.ts';
 import type { SyncOptions } from './jobs/ksef-sync.ts';
+import { LATE_INVOICE_LAST_DAY } from './rules/booking.ts';
 import { bookRoute } from './routes/book.ts';
 import { cashRoute } from './routes/cash.ts';
 import { loadSyncStatus, type Route, type RouteContext } from './routes/context.ts';
 import { costsRoute } from './routes/costs.ts';
 import { invoicesRoute } from './routes/invoices.ts';
+import { monthCloseRoute } from './routes/month-close.ts';
+import { pendingInvoicesFor, type SavedMonthResult } from './month/close.ts';
 import { settingsRoute } from './routes/settings.ts';
 
 export { currentMonth };
 
-const ROUTES: Route[] = [invoicesRoute, costsRoute, cashRoute, bookRoute, settingsRoute];
+const ROUTES: Route[] = [invoicesRoute, costsRoute, cashRoute, bookRoute, monthCloseRoute, settingsRoute];
 
 export interface AppDeps {
   db: Db;
@@ -35,8 +38,12 @@ export function createApp(deps: AppDeps) {
   const clearCookie = sessionCookie(SESSION_COOKIE, '', { secure: deps.cookieSecure, maxAgeSeconds: 0 });
 
   async function monthView(year: number, month: number): Promise<MonthView> {
-    const [m, inv, cash, entries, sync] = await Promise.all([
-      deps.db.query<{ status: 'open' | 'closed' }>('SELECT status FROM months WHERE year = $1 AND month = $2', [year, month]),
+    // Od 1. do 9. dnia: faktury za poprzedni miesiąc, które czekają na decyzję (trzeba je rozstrzygnąć przed zapłatą ZUS).
+    const today = warsawToday(now());
+    const prev = month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
+    const isCurrent = today.startsWith(`${year}-${String(month).padStart(2, '0')}`);
+    const [m, inv, cash, entries, sync, pendingPrevious] = await Promise.all([
+      deps.db.query<{ status: 'open' | 'closed'; results: SavedMonthResult | null }>('SELECT status, results FROM months WHERE year = $1 AND month = $2', [year, month]),
       deps.db.query<{ n: number }>("SELECT count(*)::int AS n FROM invoices WHERE status = 'to_review'"),
       deps.db.query<{ amount: number; has_photo: boolean }>('SELECT amount, photo IS NOT NULL AS has_photo FROM cash_reports WHERE year = $1 AND month = $2', [year, month]),
       deps.db.query<MonthEntry>(
@@ -47,11 +54,15 @@ export function createApp(deps: AppDeps) {
         [year, month],
       ),
       loadSyncStatus(deps.db),
+      isCurrent && Number(today.slice(8, 10)) <= LATE_INVOICE_LAST_DAY ? pendingInvoicesFor(deps.db, prev.year, prev.month) : 0,
     ]);
     const c = cash.rows[0];
+    const status = m.rows[0]?.status ?? 'open';
     return {
-      year, month, status: m.rows[0]?.status ?? 'open', invoicesToReview: inv.rows[0]!.n,
+      year, month, status, invoicesToReview: inv.rows[0]!.n,
       cashReport: c ? { amount: c.amount, hasPhoto: c.has_photo } : null, entries: entries.rows, sync,
+      closed: status === 'closed' ? m.rows[0]!.results : null,
+      pendingPrevious: pendingPrevious ? { ...prev, count: pendingPrevious } : null,
     };
   }
 

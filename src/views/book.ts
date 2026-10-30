@@ -44,7 +44,7 @@ function row(r: BookRow): Html {
   return html`<tr>
   <td class="num">${r.lp}</td><td>${date(r.entry_date)}</td>
   <td class="ksef">${r.ksef_number ?? ''}</td><td>${r.ksef_number ? '' : r.document_number}</td>
-  <td>${isCash ? '' : r.counterparty_tax_id ?? ''}</td><td>${isCash ? '' : r.counterparty ?? ''}</td><td></td>
+  <td>${isCash ? '' : r.counterparty_tax_id ?? ''}</td><td>${isCash ? '' : r.counterparty ?? ''}</td><td>${isCash ? '' : r.counterparty_address ?? ''}</td>
   <td>${r.description}</td>
   <td class="amt">${cell(revenue)}</td><td class="amt"></td><td class="amt">${cell(revenue)}</td>
   <td class="amt"></td><td class="amt"></td>

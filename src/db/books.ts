@@ -3,7 +3,10 @@ import type pg from 'pg';
 import { HttpError } from '../http/http.ts';
 import type { Db } from './pool.ts';
 
-type Queryable = Db | pg.PoolClient;
+export type Queryable = Db | pg.PoolClient;
+
+/** Dzień otrzymania faktury z KSeF (nadanie numeru KSeF), czas polski – decyduje o miesiącu kosztu (zasada 9. dnia). */
+export const RECEIVED_DATE_SQL = "to_char(COALESCE(permanent_storage_date, created_at) AT TIME ZONE 'Europe/Warsaw', 'YYYY-MM-DD')";
 
 export const periodOf = (isoDate: string) => ({ year: Number(isoDate.slice(0, 4)), month: Number(isoDate.slice(5, 7)) });
 
@@ -21,12 +24,14 @@ export interface KpirEntryInput {
   description: string;
   revenue?: number;
   otherCosts?: number;
-  source: 'invoice' | 'manual_cost' | 'cash_report';
+  source: 'invoice' | 'manual_cost' | 'cash_report' | 'fp';
   sourceId: number;
   /** Kolumna 3: numer faktury w KSeF. */
   ksefNumber?: string | null;
   /** Kolumna 5: identyfikator podatkowy kontrahenta z kodem kraju, np. PL5260250274. */
   counterpartyTaxId?: string | null;
+  /** Kolumna 7: adres kontrahenta (gdy brak identyfikatora podatkowego). */
+  counterpartyAddress?: string | null;
   /** Kolumna 19: uwagi. */
   notes?: string | null;
 }
@@ -37,14 +42,15 @@ export async function upsertKpirEntry(db: Queryable, e: KpirEntryInput): Promise
   await assertMonthOpen(db, year, month);
   await db.query(
     `INSERT INTO kpir_entries (year, month, entry_date, document_number, counterparty, description, revenue, other_costs, source, source_id,
-       ksef_number, counterparty_tax_id, notes)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+       ksef_number, counterparty_tax_id, notes, counterparty_address)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
      ON CONFLICT (source, source_id) DO UPDATE SET
        year = EXCLUDED.year, month = EXCLUDED.month, entry_date = EXCLUDED.entry_date, document_number = EXCLUDED.document_number,
        counterparty = EXCLUDED.counterparty, description = EXCLUDED.description, revenue = EXCLUDED.revenue, other_costs = EXCLUDED.other_costs,
-       ksef_number = EXCLUDED.ksef_number, counterparty_tax_id = EXCLUDED.counterparty_tax_id, notes = EXCLUDED.notes`,
+       ksef_number = EXCLUDED.ksef_number, counterparty_tax_id = EXCLUDED.counterparty_tax_id, notes = EXCLUDED.notes,
+       counterparty_address = EXCLUDED.counterparty_address`,
     [year, month, e.entryDate, e.documentNumber, e.counterparty, e.description, e.revenue ?? 0, e.otherCosts ?? 0, e.source, e.sourceId,
-      e.ksefNumber ?? null, e.counterpartyTaxId ?? null, e.notes ?? null],
+      e.ksefNumber ?? null, e.counterpartyTaxId ?? null, e.notes ?? null, e.counterpartyAddress ?? null],
   );
 }
 

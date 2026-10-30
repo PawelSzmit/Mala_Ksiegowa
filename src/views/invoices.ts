@@ -65,12 +65,21 @@ function correctionInfo(inv: InvoiceRow): Html | string {
   } Kwota to różnica wynikająca z korekty${inv.gross_amount < 0 ? ' – zmniejszy koszty' : ''}.</p>`;
 }
 
+const bookedMonthHref = (inv: InvoiceRow) => {
+  const booked = costBookingDate(inv.issue_date, inv.received_date);
+  return monthHref(Number(booked.slice(0, 4)), Number(booked.slice(5, 7)));
+};
+
 const MONTHS = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
 
 /** Gdzie trafi koszt – szczególnie ważne przy fakturach, które przyszły w kolejnym miesiącu. */
-function bookingInfo(inv: InvoiceRow): Html {
+function bookingInfo(inv: InvoiceRow, closedMonths: Set<string>): Html {
   const booked = costBookingDate(inv.issue_date, inv.received_date);
   const month = `${MONTHS[Number(booked.slice(5, 7)) - 1]} ${booked.slice(0, 4)}`;
+  if (closedMonths.has(booked.slice(0, 7))) {
+    const href = monthHref(Number(booked.slice(0, 4)), Number(booked.slice(5, 7)));
+    return html`<p class="error">Koszt należy do miesiąca ${month} (faktura przyszła ${date(inv.received_date)}), a ten miesiąc jest już zamknięty. Żeby ją zaksięgować, <a href="${href}">otwórz ${month} ponownie</a>, a po decyzji zamknij go jeszcze raz – kwoty ZUS i PIT zostaną przeliczone.</p>`;
+  }
   if (booked === inv.issue_date && inv.received_date.slice(0, 7) === inv.issue_date.slice(0, 7)) {
     return html`<p class="muted">Koszt trafi do księgi: ${month}.</p>`;
   }
@@ -80,13 +89,13 @@ function bookingInfo(inv: InvoiceRow): Html {
   return html`<p class="warning">Koszt trafi do księgi: <strong>${month}</strong> (faktura ${why}).</p>`;
 }
 
-function invoiceCard(inv: InvoiceRow): Html {
+function invoiceCard(inv: InvoiceRow, closedMonths: Set<string>): Html {
   const foreign = inv.currency !== 'PLN';
   return html`<div class="card invoice">
   <div class="row"><strong>${inv.invoice_number}</strong><strong>${foreign ? `${amountInput(inv.gross_amount)} ${inv.currency}` : pln(inv.gross_amount)}</strong></div>
   <p>${sellerLine(inv)}<br><span class="muted">Wystawiona ${date(inv.issue_date)} · nr KSeF ${inv.ksef_number}</span></p>
   ${correctionInfo(inv)}
-  ${bookingInfo(inv)}
+  ${bookingInfo(inv, closedMonths)}
   ${!inv.has_xml ? html`<p class="muted">Treść faktury jeszcze niepobrana – kwota z listy KSeF.</p>` : ''}
   ${inv.parse_error ? html`<p class="muted">Nie udało się odczytać szczegółów faktury (${inv.parse_error}).</p>` : ''}
   ${itemsList(inv.items)}
@@ -99,19 +108,24 @@ function invoiceCard(inv: InvoiceRow): Html {
 </div>`;
 }
 
-export function invoicesPage(p: { user: LayoutUser; toReview: InvoiceRow[]; decided: InvoiceRow[]; sync: SyncStatus; notice?: { text: string; error?: boolean } }): Html {
+export function invoicesPage(p: {
+  user: LayoutUser; toReview: InvoiceRow[]; decided: InvoiceRow[]; sync: SyncStatus; notice?: { text: string; error?: boolean };
+  /** Zamknięte miesiące, RRRR-MM. */
+  closedMonths?: string[];
+}): Html {
+  const closed = new Set(p.closedMonths ?? []);
   return layout(
     'Faktury',
     html`<h1>Faktury z KSeF</h1>
 ${p.notice ? html`<div class="card ${p.notice.error ? 'error' : 'notice'}" role="status">${p.notice.text}</div>` : ''}
 ${syncStatusBox(p.sync, true)}
 <h2>Do przejrzenia (${p.toReview.length})</h2>
-${p.toReview.length ? p.toReview.map(invoiceCard) : html`<p class="muted">Nic do przejrzenia.</p>`}
+${p.toReview.length ? p.toReview.map((inv) => invoiceCard(inv, closed)) : html`<p class="muted">Nic do przejrzenia.</p>`}
 <h2>Ostatnio rozpatrzone</h2>
 ${p.decided.length
   ? html`<div class="card">${p.decided.map((inv) => html`<div class="row">
       <span>${inv.invoice_number} · ${inv.seller_name ?? ''} <span class="muted">· ${date(inv.issue_date)}</span>${inv.is_correction ? html` <span class="badge badge-warn">KOREKTA</span>` : ''}<br>
-        <span class="muted">${inv.status === 'cost' ? html`koszt firmy – <a href="${monthHref(Number(inv.issue_date.slice(0, 4)), Number(inv.issue_date.slice(5, 7)))}">w księdze</a>` : 'nie jest kosztem'}</span></span>
+        <span class="muted">${inv.status === 'cost' ? html`koszt firmy – <a href="${bookedMonthHref(inv)}">w księdze</a>` : 'nie jest kosztem'}</span></span>
       <span><strong>${inv.currency !== 'PLN' && inv.pln_amount !== null ? pln(inv.pln_amount) : inv.currency !== 'PLN' ? `${amountInput(inv.gross_amount)} ${inv.currency}` : pln(inv.gross_amount)}</strong>
         <form method="post" action="/faktury/${inv.id}/cofnij"><button type="submit" class="link">Cofnij decyzję</button></form></span>
     </div>`)}</div>`
