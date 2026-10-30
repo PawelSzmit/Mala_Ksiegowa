@@ -18,7 +18,7 @@ mkdir -p dist
 files=(
   server.mjs package.json package-lock.json
   src migrations config
-  scripts/migrate.ts scripts/create-user.ts scripts/ksef-sync.ts
+  scripts/migrate.ts scripts/create-user.ts scripts/ksef-sync.ts scripts/setup-vh.sh
   docs/VH-WDROZENIE.md docs/KSEF-TOKEN.md
 )
 # git archive bierze pliki z zapisanej wersji, więc do paczki nie trafi nic spoza repozytorium (np. .env).

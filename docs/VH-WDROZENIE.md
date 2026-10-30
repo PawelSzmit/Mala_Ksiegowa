@@ -53,6 +53,23 @@ Strona `za-horyzont.pl` i aplikacja gabinetu się przy tym nie zmieniają.
 3. Kliknij „Create”. Zmiennych środowiskowych **nie dodawaj**: sekrety trafią do pliku `.env` w kroku 6.
 4. U góry strony aplikacji cPanel pokazuje polecenie typu `source /home/vh20129/nodevenv/mala-ksiegowa-app/24/bin/activate && cd /home/vh20129/mala-ksiegowa-app`. Skopiuj je do notatki, przyda się w krokach 5–10. Nie jest tajne.
 
+## Skrót: kroki 5–8 jednym poleceniem
+
+Po kroku 4 możesz zamiast kroków 5–8 wykonać w Terminalu jedno polecenie:
+
+```
+bash ~/mala-ksiegowa-app/scripts/setup-vh.sh
+```
+
+Skrypt robi kolejno:
+- instaluje zależności;
+- tworzy użytkownika bazy z losowym hasłem i nadaje mu prawa do bazy `vh20129_ksiegowa`;
+- zapisuje plik `.env` z losowym kluczem;
+- tworzy tabele;
+- zakłada Twoje konto.
+
+Hasła do bazy i klucza nikt nie widzi, bo trafiają prosto do `.env`. Ty podajesz tylko hasło do aplikacji i kod z telefonu. Bazę (krok 2) trzeba mieć wcześniej utworzoną, ale bez użytkownika. Skrypt można bezpiecznie uruchomić ponownie.
+
 ## 5. Zależności
 
 1. Otwórz **„Terminal”** w cPanelu.
