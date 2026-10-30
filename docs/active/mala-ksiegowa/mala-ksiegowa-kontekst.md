@@ -2,7 +2,7 @@
 
 Gałąź: `claude/project-thread-eptw6o` (kontynuacja `claude/project-thread-tqtl79`)
 Ostatnia aktualizacja: 2026-10-30
-Stan: Etapy 1–6 gotowe (KSeF, reguły, logowanie, faktury/koszty/kasa, księga KPiR, zamknięcie miesiąca z DRA). Czeka: import DRA w eZUS przez Pawła, decyzja o miesiącu startu. Następny: etap 7 (wakacje składkowe).
+Stan: Etapy 1–6 gotowe (KSeF, reguły, logowanie, faktury/koszty/kasa, księga KPiR, zamknięcie miesiąca z DRA). Start księgi: 1.01.2027 (decyzja Pawła 2026-10-30). Czeka: import DRA w eZUS przez Pawła po wdrożeniu. Następny: etap 7 (wakacje składkowe).
 
 ## Kim jest użytkownik
 
@@ -186,7 +186,8 @@ Decyzje:
   - styczeń: gdy grudnia poprzedniego roku nie ma w aplikacji, pole „dochód z grudnia” (`years.previous_december_income`).
 - **Terminy na ekranie**: ZUS do 10. (dzień Pawła; ustawowo 20.), PIT do 20. następnego miesiąca.
 - **Z review 5**: ostrzeżenie na stronie bieżącego miesiąca od 1. do 9. dnia o fakturach za poprzedni miesiąc; karta faktury mówi, gdy jej miesiąc jest zamknięty (link do otwarcia); koszt spoza KSeF z NIP/VAT UE (`parseTaxId`) albo adresem (kol. 5 i 7); dane płatnika w Ustawieniach (`/ustawienia/dane`).
-- **Otwarte**: Paweł importuje DRA w eZUS (punkt kontrolny); decyzja o starcie (styczeń 2027 zalecany – PIT i zdrowotna narastają od stycznia, start w trakcie roku wymagałby „stanu na start”).
+- **Start**: Paweł prowadzi księgę w aplikacji od 1.01.2027 (decyzja 2026-10-30) – żadnego „stanu na start”, tylko dochód z grudnia 2026 przy zamknięciu stycznia.
+- **Otwarte**: Paweł importuje DRA w eZUS po wdrożeniu (punkt kontrolny, zgoda jest).
 - Testy: `test/zus/dra.test.ts` (przykład ZUS co do grosza, schemat, PESEL), `test/month-close.test.ts` (8 scenariuszy przez HTTP). 124 z bazą, 81 bez.
 
 ## Planowany układ plików

@@ -130,7 +130,7 @@ Stan (2026-10-30): gotowe poza punktem kontrolnym z Pawłem. 124 testy zielone (
 - [x] Blokada zamkniętego miesiąca i „otwórz ponownie” z ostrzeżeniem (Claude)
 - [x] Testy: zwykły miesiąc, minimum zdrowotnej, poprawność XML (Claude); miesiąc wakacji → etap 7 (DRA dla wakacji jeszcze zablokowany)
 - [ ] **Punkt kontrolny**: Paweł importuje plik w eZUS jako dokument roboczy (bez podpisywania) i potwierdza brak błędów krytycznych (Paweł) – plik z prawdziwymi danymi powstanie po wdrożeniu (etap 8) albo wcześniej z lokalnie uruchomionej aplikacji
-- [ ] Decyzja Pawła: start księgi od stycznia 2027 (zalecane) czy od listopada 2026 (wtedy ekran „stan na start” ze stycznia–października) (Paweł)
+- [x] Decyzja Pawła: start księgi od stycznia 2027 (Paweł, 2026-10-30) → przy zamknięciu stycznia 2027 wpisać dochód z grudnia 2026; w Ustawieniach KSeF data początkowa 2027-01-01
 - [ ] Przed pierwszym prawdziwym DRA porównać z ePłatnikiem: czy eZUS przyjmuje plik bez REGON-u i nazwy skróconej (pola opcjonalne w schemacie) (Paweł/Claude)
 
 ## Etap 7. Wakacje składkowe
