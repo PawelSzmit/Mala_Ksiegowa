@@ -19,8 +19,11 @@ fail() { printf '\nSTOP: %s\n' "$1" >&2; exit 1; }
 # Środowisko Node utworzone przez „Setup Node.js App” (tam też trafiają zależności).
 activate="$(ls -d "$HOME/nodevenv/$APP_NAME"/24*/bin/activate 2>/dev/null | sort -V | tail -1 || true)"
 [ -n "$activate" ] || fail "Nie widzę środowiska Node dla $APP_NAME – najpierw utwórz aplikację w „Setup Node.js App” (krok 4)."
+# Skrypt CloudLinux czyta niezdefiniowane zmienne, więc na czas jego wczytania wyłączamy `set -u`.
+set +u
 # shellcheck disable=SC1090
 source "$activate"
+set -u
 cd "$APP_DIR"
 node --version | grep -q '^v24\.' || fail "Potrzebny Node 24, a jest $(node --version)."
 
