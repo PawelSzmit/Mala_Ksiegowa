@@ -1,5 +1,5 @@
 // Przykładowe wyliczenia do sprawdzenia przez Pawła lub księgową (punkt kontrolny etapu 2).
-// Użycie: node scripts/rules-example.ts > docs/active/mala-ksiegowa/przyklad-wyliczen.md
+// Użycie: node scripts/rules-example.ts > docs/completed/mala-ksiegowa/przyklad-wyliczen.md
 import { loadYearConfig } from '../src/rules/config.ts';
 import { formatPln } from '../src/rules/money.ts';
 import { computeYear, type YearMonthInput } from '../src/rules/year.ts';

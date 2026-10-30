@@ -6,7 +6,7 @@ Oznaczenia: [ ] do zrobienia, [x] zrobione. **Claude** = zadanie dla Claude, **P
 ## Przygotowanie
 - [x] Ideacja, wymagania, plan techniczny (Claude)
 - [x] Sprawdzenie hostingu w cPanelu (Claude, za zgodą Pawła)
-- [x] Dokumentacja wykonawcza w `docs/active/mala-ksiegowa/` (Claude)
+- [x] Dokumentacja wykonawcza w `docs/completed/mala-ksiegowa/` (Claude)
 
 ## Etap 1. Próba KSeF (go/no-go)
 Stan (2026-10-29 wieczór): próba na testowym KSeF udana – logowanie tokenem, lista faktur kosztowych i pobranie XML działają. Próba z serwera vh.pl też udana. Zostało: decyzja go/no-go Pawła.
@@ -20,10 +20,10 @@ Stan (2026-10-29 wieczór): próba na testowym KSeF udana – logowanie tokenem,
 - [x] Mieć w testowym KSeF co najmniej jedną fakturę zakupową: wystawić z drugiego testowego NIP-u na pierwszy (wymaga sesji z szyfrowaniem i poprawnej faktury FA(3)) albo użyć aplikacji testowej MF (Claude) → `scripts/ksef-test-invoice.ts`
 - [x] Uruchomić `scripts/ksef-spike.ts` na testowym KSeF z komputera z siecią i potwierdzić nazwy pól w odpowiedziach (Claude) – WYNIK: OK, typy poprawione (nabywca, isTruncated)
 - [x] Uruchomić skrypt na serwerze vh.pl w Terminalu cPanelu (Claude, za zgodą Pawła) – WYNIK: OK (Node 24.12.1), katalog próbny usunięty
-- [ ] **Punkt kontrolny**: pokazać Pawłowi wynik i decyzję go/no-go (Claude → Paweł)
+- [x] **Punkt kontrolny**: pokazać Pawłowi wynik i decyzję go/no-go – Paweł zdecydował „idziemy dalej”
 
 ## Do poprawy po review fazy 1
-Raport: `docs/active/mala-ksiegowa/review-faza-1.md`. Decyzja: można iść dalej z zastrzeżeniami (0×P1, 2×P2, 6×P3). P2 zamknąć przed/w etapie 4.
+Raport: `docs/completed/mala-ksiegowa/review-faza-1.md`. Decyzja: można iść dalej z zastrzeżeniami (0×P1, 2×P2, 6×P3). P2 zamknąć przed/w etapie 4.
 - [x] P2-1: górny limit czekania po 429; przycisk „sprawdź teraz” bez ponawiania i z blokadą częstych kliknięć; XML trzymany w bazie (Claude, etap 4) → zrobione w etapie 4 (`maxRetryWaitSeconds`, przycisk bez ponawiania, 5 min przerwy)
 - [x] P2-2: pobieranie oknami od `permanentStorageHwmDate` z `restrictToPermanentStorageHwmDate`, kontynuacja przy `isTruncated` zamiast błędu, punkt startowy zapisany w bazie (Claude, etap 4) → zrobione w etapie 4 (`queryMetadataWindow`, `settings.ksef_next_from`)
 - [x] P3-1: kwoty z KSeF do groszy przez `Math.round` lub z tekstu XML (Claude, etap 4) → zrobione (`decimalToGrosze` z tekstu XML)
@@ -43,14 +43,14 @@ Stan (2026-10-29): moduł reguł gotowy, 28 nowych testów zielonych. Punkt kont
 - [x] `src/rules/holiday.ts`: jeden miesiąc wakacji w roku (Claude)
 - [x] `src/rules/year.ts`: cały rok w jednym wywołaniu (składki płacone w następnym miesiącu, FP jako koszt) (Claude)
 - [x] Testy: strata, zero, minimum zdrowotnej, przekroczenie progu, dochód poniżej kwoty wolnej, miesiąc wakacji, drugi miesiąc wakacji odrzucony, korekta wcześniejszego miesiąca (Claude)
-- [x] Tabela przykładowych miesięcy: `docs/active/mala-ksiegowa/przyklad-wyliczen.md` (generuje `node scripts/rules-example.ts`) (Claude)
+- [x] Tabela przykładowych miesięcy: `docs/completed/mala-ksiegowa/przyklad-wyliczen.md` (generuje `node scripts/rules-example.ts`) (Claude)
 - [x] **Punkt kontrolny** (2026-10-30: Paweł potwierdził, że wyliczenia są prawidłowe): Paweł lub jego księgowa sprawdza tabelę, zwłaszcza interpretację straty i nadwyżki składek w zdrowotnej (Claude → Paweł)
 - [ ] W grudniu 2026: potwierdzić podstawę składek 2027 (komunikat ZUS po budżecie) i skalę PIT 2027 (projekt 130 tys./24%/150 tys. w Sejmie); zmienić `status` w `2027.json` na „potwierdzone” (Claude)
 - [x] Etap 5: Fundusz Pracy zapłacony w miesiącu ma się pojawić w KPiR jako koszt automatycznie (moduł reguł już go dolicza; nie wpisywać ręcznie, żeby nie liczyć podwójnie) (Claude) → etap 6: wpis `source = 'fp'` przy zamknięciu, wyłączony z danych dla modułu reguł
 - [ ] Etap 6: zapisywać faktyczne daty i kwoty wpłat składek (domyślnie: składki za miesiąc płacone w następnym) (Claude)
 
 ## Do poprawy po review fazy 2
-Raport: `docs/active/mala-ksiegowa/review-faza-2.md`. Decyzja: można iść dalej z zastrzeżeniami (0×P1, 2×P2, 6×P3).
+Raport: `docs/completed/mala-ksiegowa/review-faza-2.md`. Decyzja: można iść dalej z zastrzeżeniami (0×P1, 2×P2, 6×P3).
 - [x] P2-1 (potwierdzone przez Pawła 2026-10-30): potwierdzić z księgową / kalkulatorem ZUS interpretację zdrowotnej po stracie i przy nadwyżce składek (przykład maj–lipiec); w razie różnicy poprawić `healthIncomes` (Paweł + Claude, punkt kontrolny etapu 2)
 - [x] P2-2: dopuścić ujemne sumy miesięczne w `summarizeKpir` (faktury korygujące) + test (Claude, najpóźniej etap 4/5) → zrobione w etapie 4
 - [ ] P3-3: sprawdzać rosnącą kolejność progów PIT w `validateYearConfig` + test (Claude)
@@ -71,7 +71,7 @@ Raport: `docs/active/mala-ksiegowa/review-faza-2.md`. Decyzja: można iść dale
 - [x] P2-1: blokada logowania i zapis kroku TOTP jednym zapytaniem (odporne na równoległe próby) + test (Claude) → zrobione w etapie 4
 - [x] P2-2: zepsute ciasteczko nie może dawać 500 – pomijać je przy odczycie + test (Claude) → zrobione w etapie 4
 - [ ] P3-1: ten sam komunikat / blokada także dla nieistniejącego loginu (Claude, opcjonalnie)
-- [ ] P3-3: przy wdrożeniu sprawdzić, czy Passenger zachowuje nagłówek Host (logowanie bez 403) (Claude, etap 8) – krok 9.3 instrukcji
+- [x] P3-3: przy wdrożeniu sprawdzić, czy Passenger zachowuje nagłówek Host (logowanie bez 403) (Claude, etap 8) – krok 9.3 instrukcji – potwierdzone 2026-10-30: logowanie i zapis Ustawień (token KSeF) działają na produkcji
 - [x] P3-4: `pool.on('error')` z logiem w `src/db/pool.ts` (Claude) → zrobione
 - [x] P3-5: test aplikacji odmawia pracy na bazie bez „test” w nazwie (Claude) → zrobione (`test/helpers/test-db.ts`)
 - [x] P3-6: `/zdrowie` sprawdza połączenie z bazą (Claude, etap 8)
@@ -114,7 +114,7 @@ Stan (2026-10-30): gotowe. 108 testów zielonych; wydruk miesiąca mieści się 
 - [x] Imię i nazwisko (i ewentualnie adres) w ustawieniach – nagłówek księgi i plik DRA (Claude, etap 6)
 
 ## Do poprawy po review fazy 5
-Raport: `docs/active/mala-ksiegowa/review-faza-5.md`. Decyzja: można iść dalej z zastrzeżeniami (0×P1, 2×P2, 4×P3).
+Raport: `docs/completed/mala-ksiegowa/review-faza-5.md`. Decyzja: można iść dalej z zastrzeżeniami (0×P1, 2×P2, 4×P3).
 - [x] P2-1: od 1. do 9. dnia ostrzeżenie o fakturach za poprzedni miesiąc czekających na decyzję; zamknięcie miesiąca blokuje/ostrzega, gdy czekają jego faktury; po zamknięciu wybór „otwórz ponownie i przelicz” (Claude, etap 6)
 - [x] P2-2: koszt ręczny – osobne pola „NIP / VAT UE (z kodem kraju)” i „Adres” (adres wymagany bez NIP-u), kol. 5 i 7 w księdze (Claude, etap 6)
 - [ ] P3-1: rozważyć zapis liczby porządkowej przy zamknięciu miesiąca, żeby spóźniona faktura nie zmieniała numerów w wydrukowanych miesiącach (Claude, odłożone – kolejność zamykania miesięcy po kolei ogranicza problem do ponownego otwarcia)
@@ -134,7 +134,7 @@ Stan (2026-10-30): gotowe poza punktem kontrolnym z Pawłem. 124 testy zielone (
 - [ ] Przed pierwszym prawdziwym DRA porównać z ePłatnikiem: czy eZUS przyjmuje plik bez REGON-u i nazwy skróconej (pola opcjonalne w schemacie) (Paweł/Claude)
 
 ## Do poprawy po review fazy 6
-Raport: `docs/active/mala-ksiegowa/review-faza-6.md`. Decyzja: można iść dalej z zastrzeżeniami (0×P1, 2×P2, 5×P3).
+Raport: `docs/completed/mala-ksiegowa/review-faza-6.md`. Decyzja: można iść dalej z zastrzeżeniami (0×P1, 2×P2, 5×P3).
 - [x] P2-1: blokada zamknięcia, gdy ustawienia roku mają status „prognoza” (2027 do potwierdzenia przed zamknięciem stycznia 2027) + test (Claude, przed wdrożeniem)
 - [x] P2-2: ekran zamknięcia pokazuje datę ostatniego udanego pobrania z KSeF; przeszkoda/ostrzeżenie, gdy pobieranie nie działa lub jest starsze niż ~2 dni (Claude, przed wdrożeniem) → potwierdzenie „zamykam mimo to” (2026-10-30)
 - [x] P3-1: uwaga przy zamykaniu w dniach 1–9: „do 9. mogą jeszcze przyjść faktury za ten miesiąc” (Claude)
@@ -152,7 +152,7 @@ Raport: `docs/active/mala-ksiegowa/review-faza-6.md`. Decyzja: można iść dale
 - [ ] Przy pierwszym miesiącu wakacji: import pliku z trzema dokumentami w eZUS jako roboczych, bez błędów krytycznych (Paweł)
 
 ## Do poprawy po review fazy 7
-Raport: `docs/active/mala-ksiegowa/review-faza-7.md`. Decyzja: gotowe do dalszej pracy (0×P1, 1×P2 poprawione, 5×P3).
+Raport: `docs/completed/mala-ksiegowa/review-faza-7.md`. Decyzja: gotowe do dalszej pracy (0×P1, 1×P2 poprawione, 5×P3).
 - [x] P2-1: wakacje do wpisania w każdej chwili (po terminie RWS tylko ostrzeżenie), także na poprzedni rok + test (Claude, 2026-10-30)
 - [ ] P3-1: import pliku miesiąca wakacji (DRA + 2×RCA) w eZUS przy pierwszych wakacjach (Paweł) – ten sam punkt co w etapie 7
 - [x] P3-2: `closeMonth` czyta wiersz `years` z `FOR SHARE` (zamknięcie nie minie się ze zmianą wakacji) (Claude, opcjonalnie)
@@ -167,7 +167,8 @@ Raport: `docs/active/mala-ksiegowa/review-faza-7.md`. Decyzja: gotowe do dalszej
 - [x] `scripts/build-package.sh`: paczka `tar.gz` (Claude) – `npm run package`
 - [x] Subdomena + SSL (AutoSSL), baza `vh20129_ksiegowa`, użytkownik `vh20129_ksiegowa_app` (Claude za zgodą Pawła + skrypt setup-vh, 2026-10-30)
 - [x] Kod przez cPanel Git (gałąź `claude/project-thread-eptw6o`), aplikacja Node 24.22.1 Production, `.env`, migracje, konto `pawel` (2026-10-30; `/zdrowie` = ok, strona logowania działa)
-- [ ] Paweł loguje się pierwszy raz i uzupełnia Ustawienia (krok 10 VH-WDROZENIE) – przy okazji potwierdza sprawdzenie Origin/Host (review3 P3-3)
+- [x] Pierwsze logowanie na produkcji i zapis tokenu KSeF w Ustawieniach (2026-10-30); login zmieniany na `marta` poleceniem w Terminalu (podane Pawłowi 2026-10-30; aplikacji używa żona Pawła)
+- [ ] Uzupełnić w Ustawieniach dane płatnika do DRA (PESEL, imię, nazwisko), jeśli jeszcze nie są wpisane – aplikacja i tak nie pozwoli zamknąć miesiąca bez nich (Marta/Paweł)
 - [x] Wygenerowanie prawdziwego tokenu KSeF i wpisanie go w aplikacji (Paweł, 2026-10-30)
 - [x] Zadanie cron codziennie 6:15 (`ksef-sync.ts`, log w `~/mala-ksiegowa-logs/ksef-sync.log`; do czasu tokenu loguje „pominięto”)
 - [x] JetBackup 5: codzienne kopie baz PostgreSQL (15 kopii) i katalogu domowego – nowa baza wejdzie do kopii od najbliższej nocy
