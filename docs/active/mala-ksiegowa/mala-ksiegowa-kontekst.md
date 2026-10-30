@@ -2,7 +2,7 @@
 
 Gałąź: `claude/project-thread-eptw6o` (kontynuacja `claude/project-thread-tqtl79`)
 Ostatnia aktualizacja: 2026-10-30
-Stan: Etapy 1–7 gotowe (KSeF, reguły, logowanie, faktury/koszty/kasa, księga KPiR, zamknięcie miesiąca z DRA, wakacje składkowe). Start księgi: 1.01.2027 (decyzja Pawła 2026-10-30). Czeka: import DRA w eZUS przez Pawła po wdrożeniu. Miesiąc wakacji 2027: Paweł jeszcze nie wie – wpisze sam w Ustawieniach. Poprawki z review 6 i 7 zrobione. Następny: etap 8 (wdrożenie).
+Stan: Etapy 1–7 gotowe (KSeF, reguły, logowanie, faktury/koszty/kasa, księga KPiR, zamknięcie miesiąca z DRA, wakacje składkowe). Start księgi: 1.01.2027 (decyzja Pawła 2026-10-30). Czeka: import DRA w eZUS przez Pawła po wdrożeniu. Miesiąc wakacji 2027: Paweł jeszcze nie wie – wpisze sam w Ustawieniach. Poprawki z review 6 i 7 zrobione. Etap 8 w toku: paczka i instrukcje gotowe; czeka nazwa subdomeny i zgoda Pawła na kroki w cPanelu. Token KSeF wygenerować do 31.12.2026.
 
 ## Kim jest użytkownik
 
@@ -215,6 +215,15 @@ Decyzje:
 - Uwaga przy zamykaniu w dniach 1–9 następnego miesiąca; `assertMonthOpen` z `FOR SHARE`, `closeMonth` blokuje wiersze `years` (`FOR SHARE`) – zamknięcie nie minie się z dopisaniem kosztu ani ze zmianą wakacji.
 - Jedna lista nazw miesięcy (`src/dates.ts`: `monthName`, `monthTitle`); plik dla eZUS nazywa się `ZUS-RRRR-MM.xml`.
 - Testy: 136 z bazą, 84 bez; typecheck czysty; ekrany obejrzane (szerokość telefonu).
+
+## Etap 8 – wdrożenie (2026-10-30, w toku)
+- **Sekrety w `.env`** w katalogu aplikacji (prawa 600): `server.mjs` ładuje go `process.loadEnvFile` (zmienne z formularza cPanelu mają pierwszeństwo), skrypty npm i cron – `node --env-file(-if-exists)=.env`. Jeden plik dla aplikacji i crona (cron nie widzi zmiennych z formularza „Setup Node.js App”). Klucz losowany na serwerze (`openssl rand`), hasło bazy wpisywane `read -s` – nikt ich nie widzi w czacie.
+- **Paczka**: `npm run package` → `dist/mala-ksiegowa-DATA-COMMIT.tar.gz` (+ `.sha256`), z `git archive` (tylko zapisane pliki: bez testów, `.env`, skryptów testowego KSeF); zależności `npm ci --omit=dev` na serwerze, w środowisku Node z cPanelu (jak gabinet).
+- **Przećwiczone lokalnie** na rozpakowanej paczce: `npm ci --omit=dev`, `.env` jak w instrukcji, `npm run migrate` (2× – idempotentne), start `server.mjs`, `/zdrowie` = ok, skrypt crona.
+- **Cron**: polecenie aktywujące środowisko z cPanelu + `node --env-file=.env scripts/ksef-sync.ts >> ~/mala-ksiegowa-logs/ksef-sync.log`.
+- **Domena**: `za-horyzont.pl` jest na koncie jako domena dodatkowa (addon); propozycja subdomeny `ksiegowa.za-horyzont.pl` – do potwierdzenia przez Pawła. DNS nie dało się sprawdzić z sandboxa.
+- **Token KSeF (ważne)**: Aplikacja Podatnika KSeF 2.0 (ap.ksef.mf.gov.pl) generuje tokeny **do 31.12.2026** (ksef.podatki.gov.pl, strona aplikacji, zmod. 15.10.2026); token ważny do unieważnienia (Podręcznik KSeF 2.0 cz. I, 2.4.2). Kroki: Tokeny → Generuj token, nazwa, uprawnienie do przeglądania faktur, wyświetlany raz (2.4.6).
+- Wzorzec: instrukcja gabinetu `~/za-horyzont-app/VH-WDROZENIE.md` (przeczytana przez API cPanelu, bez zmian).
 
 ## Planowany układ plików
 

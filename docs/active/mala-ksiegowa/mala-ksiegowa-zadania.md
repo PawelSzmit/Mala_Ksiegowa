@@ -29,7 +29,7 @@ Raport: `docs/active/mala-ksiegowa/review-faza-1.md`. Decyzja: można iść dale
 - [x] P3-1: kwoty z KSeF do groszy przez `Math.round` lub z tekstu XML (Claude, etap 4) → zrobione (`decimalToGrosze` z tekstu XML)
 - [x] P3-2: test „wygasły refreshToken → ponowne logowanie” (Claude, etap 4) → zrobione
 - [x] P3-3: jedna synchronizacja na raz (blokada) (Claude, etap 4) → zrobione (blokada w bazie)
-- [ ] P3-5: w instrukcji wdrożenia: token tylko w zmiennych środowiskowych / zaszyfrowanej bazie (Claude, etap 8)
+- [x] P3-5: w instrukcji wdrożenia: token tylko w zmiennych środowiskowych / zaszyfrowanej bazie (Claude, etap 8) → `docs/VH-WDROZENIE.md`, `docs/KSEF-TOKEN.md`
 - [ ] P3-6: poprawić nieaktualne fragmenty planu i kontekstu (gałąź, „tylko dokumenty”, otwarte pytanie o filtr) (Claude)
 
 ## Etap 2. Reguły podatkowe i składkowe
@@ -55,7 +55,7 @@ Raport: `docs/active/mala-ksiegowa/review-faza-2.md`. Decyzja: można iść dale
 - [x] P2-2: dopuścić ujemne sumy miesięczne w `summarizeKpir` (faktury korygujące) + test (Claude, najpóźniej etap 4/5) → zrobione w etapie 4
 - [ ] P3-3: sprawdzać rosnącą kolejność progów PIT w `validateYearConfig` + test (Claude)
 - [ ] P3-4: testy: wakacje w styczniu, ręczne `socialPaid`, kwoty 2027, chorobowe w `computeYear` (Claude)
-- [ ] P3-5: przy wdrożeniu sprawdzić ścieżkę do `config/years` (Claude, etap 8)
+- [x] P3-5: przy wdrożeniu sprawdzić ścieżkę do `config/years` (Claude, etap 8) → ścieżka liczona względem pliku modułu; sprawdzone na rozpakowanej paczce
 - [ ] P3-2: jeśli stopa wypadkowa zmieni się od kwietnia – dodać do pliku ustawień stawkę „od kwietnia” (Claude, w razie potrzeby)
 
 ## Etap 3. Szkielet, baza, logowanie
@@ -71,10 +71,10 @@ Raport: `docs/active/mala-ksiegowa/review-faza-2.md`. Decyzja: można iść dale
 - [x] P2-1: blokada logowania i zapis kroku TOTP jednym zapytaniem (odporne na równoległe próby) + test (Claude) → zrobione w etapie 4
 - [x] P2-2: zepsute ciasteczko nie może dawać 500 – pomijać je przy odczycie + test (Claude) → zrobione w etapie 4
 - [ ] P3-1: ten sam komunikat / blokada także dla nieistniejącego loginu (Claude, opcjonalnie)
-- [ ] P3-3: przy wdrożeniu sprawdzić, czy Passenger zachowuje nagłówek Host (logowanie bez 403) (Claude, etap 8)
+- [ ] P3-3: przy wdrożeniu sprawdzić, czy Passenger zachowuje nagłówek Host (logowanie bez 403) (Claude, etap 8) – krok 9.3 instrukcji
 - [x] P3-4: `pool.on('error')` z logiem w `src/db/pool.ts` (Claude) → zrobione
 - [x] P3-5: test aplikacji odmawia pracy na bazie bez „test” w nazwie (Claude) → zrobione (`test/helpers/test-db.ts`)
-- [ ] P3-6: `/zdrowie` sprawdza połączenie z bazą (Claude, etap 8)
+- [x] P3-6: `/zdrowie` sprawdza połączenie z bazą (Claude, etap 8)
 
 ## Etap 4. Faktury, koszty, kasa
 Stan (2026-10-30): gotowe. 98 testów zielonych; próba na prawdziwym testowym KSeF udana (faktura pobrana z treścią i pozycjami).
@@ -98,7 +98,7 @@ Raport: `review-faza-4.md`. Decyzja: można iść dalej z zastrzeżeniami (0×P1
 - [ ] P3-3: za duży plik – powrót do formularza z wpisanymi danymi (Claude)
 - [ ] P3-4: oznaczenie faktur zaliczkowych/rozliczeniowych + zasada księgowania do potwierdzenia z księgową (Claude + Paweł)
 - [ ] P3-6: testy: okno 90 dni i wznowienie po 5 oknach, HEIC, limit 8 MB (Claude)
-- [ ] P3-7: w instrukcji wdrożenia – startujemy z pustą bazą (faktury testowe nie mieszają się z prawdziwymi) (Claude, etap 8)
+- [x] P3-7: w instrukcji wdrożenia – startujemy z pustą bazą (faktury testowe nie mieszają się z prawdziwymi) (Claude, etap 8)
 
 ## Etap 5. Księga KPiR
 Stan (2026-10-30): gotowe. 108 testów zielonych; wydruk miesiąca mieści się na 1 stronie A4 poziomo.
@@ -161,13 +161,14 @@ Raport: `docs/active/mala-ksiegowa/review-faza-7.md`. Decyzja: gotowe do dalszej
 - [x] P3-5: łamanie „Rok 2026” na telefonie; test przypomnienia bez pliku ustawień roku (Claude)
 
 ## Etap 8. Wdrożenie na vh.pl
-- [ ] Zapytać Pawła o nazwę subdomeny (Claude → Paweł)
-- [ ] `docs/KSEF-TOKEN.md`: jak wygenerować token tylko do odczytu po zalogowaniu Profilem Zaufanym (Claude)
-- [ ] `docs/VH-WDROZENIE.md`: instrukcja krok po kroku na wzór instrukcji gabinetu (Claude)
-- [ ] `scripts/build-package.sh`: paczka `tar.gz` (Claude)
+- [ ] Zapytać Pawła o nazwę subdomeny (Claude → Paweł) – propozycja `ksiegowa.za-horyzont.pl` (domena jest na koncie jako addon), zapytany 2026-10-30
+- [x] `docs/KSEF-TOKEN.md`: jak wygenerować token tylko do odczytu po zalogowaniu Profilem Zaufanym (Claude) – **token trzeba wygenerować do 31.12.2026** (Aplikacja Podatnika generuje tokeny do końca 2026; token ważny do unieważnienia)
+- [x] `docs/VH-WDROZENIE.md`: instrukcja krok po kroku na wzór instrukcji gabinetu (Claude) – przećwiczona lokalnie na rozpakowanej paczce (npm ci, .env, migracje, /zdrowie, cron)
+- [x] `scripts/build-package.sh`: paczka `tar.gz` (Claude) – `npm run package`
 - [ ] Subdomena + SSL, baza PostgreSQL z osobnym użytkownikiem (Paweł lub Claude za zgodą)
 - [ ] Wgranie paczki, aplikacja Node 24 w cPanelu, zmienne środowiskowe, migracje, pierwsze konto (Paweł lub Claude za zgodą)
 - [ ] Wygenerowanie prawdziwego tokenu KSeF i wpisanie go w aplikacji (Paweł)
 - [ ] Zadanie cron raz dziennie (Paweł lub Claude za zgodą)
 - [ ] Sprawdzić, że JetBackup obejmuje bazę i katalog aplikacji (Claude)
 - [ ] Pierwsze zamknięcie prawdziwego miesiąca razem z Pawłem (Paweł)
+- [ ] Ryzyko po 2026: gdyby token przestał działać (unieważnienie, wyciek), nowego może nie dać się wygenerować – wtedy uwierzytelnianie certyfikatem KSeF (XAdES, mamy próbę z etapu 1) (Claude, w razie potrzeby)
