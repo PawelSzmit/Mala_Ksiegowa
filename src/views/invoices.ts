@@ -3,6 +3,7 @@ import { costBookingDate, LATE_INVOICE_LAST_DAY } from '../rules/booking.ts';
 import { html, type Html } from './html.ts';
 import { layout, type LayoutUser } from './layout.ts';
 import { amountInput, date, dateTime, monthHref, pln } from './format.ts';
+import { monthName } from '../dates.ts';
 
 export interface InvoiceRow {
   id: number;
@@ -70,12 +71,11 @@ const bookedMonthHref = (inv: InvoiceRow) => {
   return monthHref(Number(booked.slice(0, 4)), Number(booked.slice(5, 7)));
 };
 
-const MONTHS = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
 
 /** Gdzie trafi koszt – szczególnie ważne przy fakturach, które przyszły w kolejnym miesiącu. */
 function bookingInfo(inv: InvoiceRow, closedMonths: Set<string>): Html {
   const booked = costBookingDate(inv.issue_date, inv.received_date);
-  const month = `${MONTHS[Number(booked.slice(5, 7)) - 1]} ${booked.slice(0, 4)}`;
+  const month = `${monthName(Number(booked.slice(5, 7)))} ${booked.slice(0, 4)}`;
   if (closedMonths.has(booked.slice(0, 7))) {
     const href = monthHref(Number(booked.slice(0, 4)), Number(booked.slice(5, 7)));
     return html`<p class="error">Koszt należy do miesiąca ${month} (faktura przyszła ${date(inv.received_date)}), a ten miesiąc jest już zamknięty. Żeby ją zaksięgować, <a href="${href}">otwórz ${month} ponownie</a>, a po decyzji zamknij go jeszcze raz – kwoty ZUS i PIT zostaną przeliczone.</p>`;

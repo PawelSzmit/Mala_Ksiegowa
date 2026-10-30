@@ -2,7 +2,7 @@
 
 Gałąź: `claude/project-thread-eptw6o` (kontynuacja `claude/project-thread-tqtl79`)
 Ostatnia aktualizacja: 2026-10-30
-Stan: Etapy 1–7 gotowe (KSeF, reguły, logowanie, faktury/koszty/kasa, księga KPiR, zamknięcie miesiąca z DRA, wakacje składkowe). Start księgi: 1.01.2027 (decyzja Pawła 2026-10-30). Czeka: import DRA w eZUS przez Pawła po wdrożeniu. Miesiąc wakacji 2027: Paweł jeszcze nie wie – wpisze sam w Ustawieniach. Następny: poprawki P2 z review 6, potem etap 8 (wdrożenie).
+Stan: Etapy 1–7 gotowe (KSeF, reguły, logowanie, faktury/koszty/kasa, księga KPiR, zamknięcie miesiąca z DRA, wakacje składkowe). Start księgi: 1.01.2027 (decyzja Pawła 2026-10-30). Czeka: import DRA w eZUS przez Pawła po wdrożeniu. Miesiąc wakacji 2027: Paweł jeszcze nie wie – wpisze sam w Ustawieniach. Poprawki z review 6 i 7 zrobione. Następny: etap 8 (wdrożenie).
 
 ## Kim jest użytkownik
 
@@ -208,6 +208,13 @@ Decyzje:
 - Testy: `test/zus/dra.test.ts` (+3: przykład 1 z instrukcji ZUS co do grosza, bez chorobowego, błędne dane), `test/holiday.test.ts` (4 scenariusze przez HTTP). 131 z bazą, 87 bez; typecheck czysty; ekrany obejrzane w przeglądarce (szerokość telefonu).
 - **Do sprawdzenia przy imporcie w eZUS**: plik z trzema dokumentami (ten sam punkt kontrolny co zwykły DRA, gdy przyjdzie miesiąc wakacji).
 - **Review etapu 7 (2026-10-30)**: gotowe do dalszej pracy (0×P1, 1×P2 poprawione od razu, 5×P3), raport `review-faza-7.md`. Na prośbę Pawła wakacje wpisuje się w każdej chwili (poprzedni, bieżący, następny rok); po terminie RWS tylko ostrzeżenie, blokada wyłącznie przy zamkniętych miesiącach (trzeba je otworzyć).
+
+## Poprawki po review 6 i 7 (2026-10-30)
+- Zamknięcie zablokowane, gdy plik stawek roku ma status „prognoza” (2027 do potwierdzenia przed zamknięciem stycznia 2027).
+- Ekran zamknięcia pokazuje ostatnie pobranie z KSeF; brak ustawień, błąd albo pobranie starsze niż 48 h (`KSEF_FRESH_HOURS`) → ostrzeżenie i pole „Sprawdziłem – zamykam mimo to” (świadomie nie twarda blokada, bo KSeF bywa niedostępny).
+- Uwaga przy zamykaniu w dniach 1–9 następnego miesiąca; `assertMonthOpen` z `FOR SHARE`, `closeMonth` blokuje wiersze `years` (`FOR SHARE`) – zamknięcie nie minie się z dopisaniem kosztu ani ze zmianą wakacji.
+- Jedna lista nazw miesięcy (`src/dates.ts`: `monthName`, `monthTitle`); plik dla eZUS nazywa się `ZUS-RRRR-MM.xml`.
+- Testy: 136 z bazą, 84 bez; typecheck czysty; ekrany obejrzane (szerokość telefonu).
 
 ## Planowany układ plików
 

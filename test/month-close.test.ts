@@ -1,4 +1,4 @@
-// Etap 6 przez HTTP: zamknięcie miesiąca, kwoty ZUS i PIT, plik DRA, ponowne otwarcie, dane płatnika. Wymaga TEST_DATABASE_URL.
+// Etap 6 przez HTTP: zamknięcie miesiąca, kwoty ZUS i PIT, plik DRA, ponowne otwarcie, dane płatnika (+ poprawki z review 6). Wymaga TEST_DATABASE_URL.
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 import { createServer, type Server } from 'node:http';
@@ -58,6 +58,8 @@ describe('zamknięcie miesiąca, ZUS i PIT', { skip: skipWithoutDb }, () => {
     nowMs = Date.parse('2026-11-05T10:00:00Z');
     await db.query('TRUNCATE invoices, manual_costs, cash_reports, kpir_entries, months, years');
     await db.query("UPDATE settings SET nip = '5260250274', pesel = $1, first_name = 'Paweł', last_name = 'Kowalski', regon = NULL, short_name = NULL", [PESEL]);
+    // KSeF ustawiony i „świeży” (data w przyszłości = zawsze mniej niż 2 dni temu); scenariusze KSeF ustawiają to same.
+    await db.query("UPDATE settings SET ksef_token_enc = 'x', ksef_sync_from = '2026-01-01', ksef_last_success_at = '2100-01-01', ksef_last_error = NULL");
   });
 
   it('podgląd: kwoty ZUS i PIT z terminami; przeszkody: brak raportu z kasy, faktura do decyzji, miesiąc w trakcie', async () => {
@@ -110,7 +112,7 @@ describe('zamknięcie miesiąca, ZUS i PIT', { skip: skipWithoutDb }, () => {
     assert.equal((await post('/miesiac/2026/10/zamknij')).status, 409);
 
     const dra = await get('/miesiac/2026/10/dra.xml');
-    assert.equal(dra.headers.get('content-disposition'), 'attachment; filename="DRA-2026-10.xml"');
+    assert.equal(dra.headers.get('content-disposition'), 'attachment; filename="ZUS-2026-10.xml"');
     const xml = await dra.text();
     assert.deepEqual(draSchemaErrors(xml), []);
     assert.deepEqual(
@@ -198,5 +200,60 @@ describe('zamknięcie miesiąca, ZUS i PIT', { skip: skipWithoutDb }, () => {
     const rows = (await db.query("SELECT counterparty_tax_id, counterparty_address FROM kpir_entries WHERE source = 'manual_cost' ORDER BY entry_date")).rows;
     assert.deepEqual(rows.map((r) => [r.counterparty_tax_id, r.counterparty_address]), [['IE6388047V', null], ['PL5260250274', null], [null, 'ul. Długa 1, Kraków']]);
     assert.match(await (await get('/ksiega/2026/10')).text(), /<td><\/td><td>Sklep<\/td><td>ul. Długa 1, Kraków<\/td>/);
+  });
+  it('stawki roku to prognoza (2027): zamknięcie zablokowane z jasnym komunikatem', async () => {
+    nowMs = Date.parse('2027-02-04T10:00:00Z');
+    await cash(2027, 1, '9 000');
+    await post('/miesiac/2027/01/grudzien', { income: '0' });
+    const page = await (await get('/miesiac/2027/01/zamkniecie')).text();
+    assert.match(page, /Stawki na 2027 rok \(podstawa składek ZUS, skala PIT\) są jeszcze prognozą/);
+    assert.match(page, /<button type="submit" disabled>Zamknij miesiąc/);
+    const res = await post('/miesiac/2027/01/zamknij');
+    assert.equal(res.status, 409);
+    assert.equal(await monthStatus(2027, 1), 'open');
+  });
+
+  it('KSeF: data ostatniego pobrania na ekranie; błąd, brak ustawień albo stare pobranie wymagają potwierdzenia', async () => {
+    await cash(2026, 10, '1 000');
+    await db.query("UPDATE settings SET ksef_last_success_at = '2026-11-05T08:00:00Z'");
+    let page = await (await get('/miesiac/2026/10/zamkniecie')).text();
+    assert.match(page, /Faktury z KSeF ostatnio pobrane: 5 lis 2026/);
+    assert.doesNotMatch(page, /name="ksef_ok"/);
+
+    await db.query("UPDATE settings SET ksef_last_error = 'Token wygasł'");
+    page = await (await get('/miesiac/2026/10/zamkniecie')).text();
+    assert.match(page, /Ostatnie pobieranie z KSeF nie powiodło się \(Token wygasł\)/);
+    assert.match(page, /name="ksef_ok" value="tak" required/);
+    let res = await post('/miesiac/2026/10/zamknij');
+    assert.equal(res.status, 409);
+    assert.match(await res.text(), /Zaznacz potwierdzenie/);
+    assert.equal(await monthStatus(2026, 10), 'open');
+
+    await db.query("UPDATE settings SET ksef_last_error = NULL, ksef_last_success_at = '2026-11-02T08:00:00Z'");
+    assert.match(await (await get('/miesiac/2026/10/zamkniecie')).text(), /nie były pobierane od ponad 2 dni/);
+    await db.query('UPDATE settings SET ksef_token_enc = NULL');
+    assert.match(await (await get('/miesiac/2026/10/zamkniecie')).text(), /Pobieranie faktur z KSeF nie jest ustawione/);
+
+    res = await post('/miesiac/2026/10/zamknij', { ksef_ok: 'tak' });
+    assert.equal(res.status, 303);
+    assert.equal(await monthStatus(2026, 10), 'closed');
+  });
+
+  it('zamykanie w dniach 1–9: uwaga o fakturach, które mogą jeszcze przyjść; później jej nie ma', async () => {
+    await cash(2026, 10, '1 000');
+    assert.match(await (await get('/miesiac/2026/10/zamkniecie')).text(), /Do 9\. dnia mogą jeszcze przyjść faktury za ten miesiąc/);
+    nowMs = Date.parse('2026-11-10T10:00:00Z');
+    assert.doesNotMatch(await (await get('/miesiac/2026/10/zamkniecie')).text(), /Do 9\. dnia mogą jeszcze przyjść/);
+  });
+
+  it('grudnia nie otworzysz, gdy zamknięty jest styczeń następnego roku', async () => {
+    nowMs = Date.parse('2027-01-12T10:00:00Z');
+    await cash(2026, 12, '1 000');
+    assert.equal((await post('/miesiac/2026/12/zamknij')).status, 303);
+    await db.query("INSERT INTO months (year, month, status) VALUES (2027, 1, 'closed')");
+    const res = await post('/miesiac/2026/12/otworz', { confirm: 'tak' });
+    assert.equal(res.status, 409);
+    assert.match(await res.text(), /Najpierw otwórz styczeń 2027/);
+    assert.equal(await monthStatus(2026, 12), 'closed');
   });
 });

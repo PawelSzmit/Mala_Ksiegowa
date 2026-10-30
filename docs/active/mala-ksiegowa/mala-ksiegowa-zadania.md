@@ -135,13 +135,13 @@ Stan (2026-10-30): gotowe poza punktem kontrolnym z Pawłem. 124 testy zielone (
 
 ## Do poprawy po review fazy 6
 Raport: `docs/active/mala-ksiegowa/review-faza-6.md`. Decyzja: można iść dalej z zastrzeżeniami (0×P1, 2×P2, 5×P3).
-- [ ] P2-1: blokada zamknięcia, gdy ustawienia roku mają status „prognoza” (2027 do potwierdzenia przed zamknięciem stycznia 2027) + test (Claude, przed wdrożeniem)
-- [ ] P2-2: ekran zamknięcia pokazuje datę ostatniego udanego pobrania z KSeF; przeszkoda/ostrzeżenie, gdy pobieranie nie działa lub jest starsze niż ~2 dni (Claude, przed wdrożeniem)
-- [ ] P3-1: uwaga przy zamykaniu w dniach 1–9: „do 9. mogą jeszcze przyjść faktury za ten miesiąc” (Claude)
-- [ ] P3-2: `assertMonthOpen` z `FOR SHARE` (zapis czeka na trwające zamknięcie) (Claude, opcjonalnie)
+- [x] P2-1: blokada zamknięcia, gdy ustawienia roku mają status „prognoza” (2027 do potwierdzenia przed zamknięciem stycznia 2027) + test (Claude, przed wdrożeniem)
+- [x] P2-2: ekran zamknięcia pokazuje datę ostatniego udanego pobrania z KSeF; przeszkoda/ostrzeżenie, gdy pobieranie nie działa lub jest starsze niż ~2 dni (Claude, przed wdrożeniem) → potwierdzenie „zamykam mimo to” (2026-10-30)
+- [x] P3-1: uwaga przy zamykaniu w dniach 1–9: „do 9. mogą jeszcze przyjść faktury za ten miesiąc” (Claude)
+- [x] P3-2: `assertMonthOpen` z `FOR SHARE` (zapis czeka na trwające zamknięcie) (Claude, opcjonalnie)
 - [x] P3-3: zapytać Pawła, czy w grudniu 2026 bierze wakacje składkowe → nie bierze (Paweł, 2026-10-30)
-- [ ] P3-4: jedna lista nazw miesięcy (Claude, porządki)
-- [ ] P3-5: testy: ~~zamknięcie miesiąca wakacji~~ (zrobione w etapie 7), rok z prognozą, otwarcie grudnia przy zamkniętym styczniu (Claude)
+- [x] P3-4: jedna lista nazw miesięcy (Claude, porządki) → `src/dates.ts`
+- [x] P3-5: testy: zamknięcie miesiąca wakacji (etap 7), rok z prognozą, otwarcie grudnia przy zamkniętym styczniu, KSeF, dni 1–9 (Claude)
 
 ## Etap 7. Wakacje składkowe
 - [x] Potwierdzić postać DRA w miesiącu wakacji (Claude) → instrukcja ZUS: DRA + RCA 05 14 + RCA 05 10 w jednym pliku
@@ -155,10 +155,10 @@ Raport: `docs/active/mala-ksiegowa/review-faza-6.md`. Decyzja: można iść dale
 Raport: `docs/active/mala-ksiegowa/review-faza-7.md`. Decyzja: gotowe do dalszej pracy (0×P1, 1×P2 poprawione, 5×P3).
 - [x] P2-1: wakacje do wpisania w każdej chwili (po terminie RWS tylko ostrzeżenie), także na poprzedni rok + test (Claude, 2026-10-30)
 - [ ] P3-1: import pliku miesiąca wakacji (DRA + 2×RCA) w eZUS przy pierwszych wakacjach (Paweł) – ten sam punkt co w etapie 7
-- [ ] P3-2: `closeMonth` czyta wiersz `years` z `FOR SHARE` (zamknięcie nie minie się ze zmianą wakacji) (Claude, opcjonalnie)
-- [ ] P3-3: nazwa pliku `ZUS-RRRR-MM.xml` zamiast `DRA-…` (Claude, kosmetyka)
+- [x] P3-2: `closeMonth` czyta wiersz `years` z `FOR SHARE` (zamknięcie nie minie się ze zmianą wakacji) (Claude, opcjonalnie)
+- [x] P3-3: nazwa pliku `ZUS-RRRR-MM.xml` zamiast `DRA-…` (Claude, kosmetyka)
 - [ ] P3-4: Paweł pamięta o RWS sam, gdy nie zagląda do aplikacji w miesiącu przed wakacjami (bez powiadomień – świadomie)
-- [ ] P3-5: łamanie „Rok 2026” na telefonie; test przypomnienia bez pliku ustawień roku (Claude)
+- [x] P3-5: łamanie „Rok 2026” na telefonie; test przypomnienia bez pliku ustawień roku (Claude)
 
 ## Etap 8. Wdrożenie na vh.pl
 - [ ] Zapytać Pawła o nazwę subdomeny (Claude → Paweł)

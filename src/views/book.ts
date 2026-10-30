@@ -2,7 +2,7 @@ import type { BookMonth, BookRow, BookTotals } from '../rules/kpir-book.ts';
 import { html, type Html } from './html.ts';
 import { layout, type LayoutUser } from './layout.ts';
 import { date, monthHref } from './format.ts';
-import { MONTH_NAMES } from './pages.ts';
+import { monthName, monthTitle } from '../dates.ts';
 
 /** Kwota w komórce księgi: „1 234,56” (bez „zł” – nagłówek kolumny mówi „zł gr”); zero w zapisie = puste pole. */
 export function cell(grosze: number, showZero = false): string {
@@ -63,12 +63,12 @@ function sumRow(label: string, t: BookTotals, cls: string): Html {
 }
 
 export function monthTable(m: BookMonth, year: number): Html {
-  const name = `${MONTH_NAMES[m.month - 1]} ${year}`;
+  const name = `${monthTitle(m.month)} ${year}`;
   return html`<section class="book-month">
 <h2>${name}</h2>
 <div class="table-wrap"><table class="book">${HEAD}<tbody>
 ${m.rows.length ? m.rows.map(row) : html`<tr><td colspan="19" class="muted">Brak zapisów w tym miesiącu.</td></tr>`}
-${sumRow(`Razem ${MONTH_NAMES[m.month - 1].toLowerCase()}`, m.totals, 'sum')}
+${sumRow(`Razem ${monthName(m.month)}`, m.totals, 'sum')}
 ${m.month > 1 ? sumRow('Od początku roku do końca poprzedniego miesiąca', m.previous, 'sum-prev') : ''}
 ${sumRow('Od początku roku', m.cumulative, 'sum-cum')}
 </tbody></table></div>
@@ -80,7 +80,7 @@ function annualSummary(months: BookMonth[], year: number): Html {
   return html`<section class="book-month">
 <h2>Zestawienie ${months.length === 12 ? 'roczne' : 'od początku roku'} ${year}</h2>
 <div class="table-wrap"><table class="book summary"><thead><tr><th>Miesiąc</th><th>Przychód (kol. 11)</th><th>Wydatki (kol. 16)</th><th>Dochód</th><th>Przychód narastająco</th><th>Wydatki narastająco</th><th>Dochód narastająco</th></tr></thead><tbody>
-${months.map((m) => html`<tr><td>${MONTH_NAMES[m.month - 1]}</td><td class="amt">${cell(m.totals.revenue, true)}</td><td class="amt">${cell(m.totals.costs, true)}</td>
+${months.map((m) => html`<tr><td>${monthTitle(m.month)}</td><td class="amt">${cell(m.totals.revenue, true)}</td><td class="amt">${cell(m.totals.costs, true)}</td>
   <td class="amt">${cell(m.totals.revenue - m.totals.costs, true)}</td><td class="amt">${cell(m.cumulative.revenue, true)}</td>
   <td class="amt">${cell(m.cumulative.costs, true)}</td><td class="amt">${cell(m.cumulative.revenue - m.cumulative.costs, true)}</td></tr>`)}
 ${last ? html`<tr class="sum-cum"><td>Razem</td><td class="amt">${cell(last.cumulative.revenue, true)}</td><td class="amt">${cell(last.cumulative.costs, true)}</td><td class="amt">${cell(last.cumulative.revenue - last.cumulative.costs, true)}</td><td></td><td></td><td></td></tr>` : ''}
@@ -106,8 +106,8 @@ const toolbar = (links: Html) => html`<div class="actions no-print">${links}<but
 export function bookMonthPage(p: { user: LayoutUser; year: number; month: BookMonth; header: BookHeader }): Html {
   const mm = String(p.month.month).padStart(2, '0');
   return layout(
-    `Księga ${MONTH_NAMES[p.month.month - 1]} ${p.year}`,
-    html`${bookHeader(p.header, p.year, MONTH_NAMES[p.month.month - 1])}
+    `Księga ${monthTitle(p.month.month)} ${p.year}`,
+    html`${bookHeader(p.header, p.year, monthTitle(p.month.month))}
 ${toolbar(html`<a href="${monthHref(p.year, p.month.month)}">← wróć do miesiąca</a><a href="/ksiega/${p.year}">cały rok ${p.year}</a>`)}
 ${monthTable(p.month, p.year)}
 <p class="muted no-print">Plik: księga-${p.year}-${mm}. W oknie drukowania wybierz „Zapisz jako PDF” i układ poziomy.</p>`,

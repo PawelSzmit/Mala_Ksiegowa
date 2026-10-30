@@ -5,8 +5,8 @@ import { syncStatusBox, type SyncStatus } from './invoices.ts';
 import type { SavedMonthResult } from '../month/close.ts';
 import type { RwsReminder } from '../month/holiday.ts';
 import { closedMonthCard } from './month-close.ts';
+import { monthName, monthTitle } from '../dates.ts';
 
-export const MONTH_NAMES = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
 
 export function loginPage(error?: string): Html {
   return layout(
@@ -60,7 +60,7 @@ export interface MonthView {
 
 /** Przypomnienie o wniosku RWS z danymi do przepisania (wniosek składa się tylko w eZUS, pliku nie da się zaimportować). */
 function rwsCard(r: RwsReminder, year: number, month: number): Html {
-  const target = `${MONTH_NAMES[r.month - 1]!.toLowerCase()} ${r.year}`;
+  const target = `${monthName(r.month)} ${r.year}`;
   const p = r.payer;
   const row = (label: string, value: string | null) => html`<div class="row"><span>${label}</span><strong>${value || '—'}</strong></div>`;
   return html`<div class="card notice" id="rws">
@@ -107,19 +107,19 @@ export function monthPage(view: MonthView, user: { username: string }, notice?: 
   const costs = view.entries.filter((e) => !e.revenue);
   const totalCosts = costs.reduce((sum, e) => sum + e.other_costs, 0);
   return layout(
-    `${MONTH_NAMES[view.month - 1]} ${view.year}`,
+    `${monthTitle(view.month)} ${view.year}`,
     html`<nav class="months">
-  <a href="${href(prev)}">← ${MONTH_NAMES[prev.month - 1]} ${prev.year}</a>
-  <a href="${href(next)}">${MONTH_NAMES[next.month - 1]} ${next.year} →</a>
+  <a href="${href(prev)}">← ${monthTitle(prev.month)} ${prev.year}</a>
+  <a href="${href(next)}">${monthTitle(next.month)} ${next.year} →</a>
 </nav>
 <div class="card">
-  <h1>${MONTH_NAMES[view.month - 1]} ${view.year}</h1>
+  <h1>${monthTitle(view.month)} ${view.year}</h1>
   <span class="badge">${open ? 'Otwarty' : 'Zamknięty'}</span>
 </div>
 ${notice ? html`<div class="card notice" role="status">${notice}</div>` : ''}
 ${view.rws ? rwsCard(view.rws, view.year, view.month) : ''}
 ${view.holiday && open ? html`<div class="card notice"><strong>Miesiąc wakacji składkowych.</strong> Składek społecznych i Funduszu Pracy za ten miesiąc nie płacisz, zdrowotną tak. Zwolnienie działa tylko wtedy, gdy ZUS przyjął wniosek RWS – jeśli odmówił, usuń wakacje w <a href="/ustawienia#wakacje">Ustawieniach</a>.</div>` : ''}
-${view.pendingPrevious ? html`<div class="card error" role="alert"><strong>Faktury za ${MONTH_NAMES[view.pendingPrevious.month - 1]!.toLowerCase()} czekają na decyzję: ${view.pendingPrevious.count}.</strong> Przyszły do 9. dnia, więc należą do poprzedniego miesiąca – rozstrzygnij je przed zapłatą ZUS 10. i przed zamknięciem tamtego miesiąca. · <a href="/faktury">Przejrzyj</a></div>` : ''}
+${view.pendingPrevious ? html`<div class="card error" role="alert"><strong>Faktury za ${monthName(view.pendingPrevious.month)} czekają na decyzję: ${view.pendingPrevious.count}.</strong> Przyszły do 9. dnia, więc należą do poprzedniego miesiąca – rozstrzygnij je przed zapłatą ZUS 10. i przed zamknięciem tamtego miesiąca. · <a href="/faktury">Przejrzyj</a></div>` : ''}
 ${view.invoicesToReview ? html`<div class="card notice">Faktury z KSeF do przejrzenia: <strong>${view.invoicesToReview}</strong> · <a href="/faktury">Przejrzyj</a></div>` : ''}
 <div class="card">
   <h2>Przychód</h2>

@@ -58,6 +58,8 @@ describe('wakacje składkowe', { skip: skipWithoutDb }, () => {
     nowMs = Date.parse('2026-11-05T10:00:00Z');
     await db.query('TRUNCATE invoices, manual_costs, cash_reports, kpir_entries, months, years');
     await db.query("UPDATE settings SET nip = '5260250274', pesel = $1, first_name = 'Paweł', last_name = 'Kowalski', regon = NULL, short_name = NULL", [PESEL]);
+    // KSeF ustawiony i „świeży” (data w przyszłości = zawsze mniej niż 2 dni temu); scenariusze KSeF ustawiają to same.
+    await db.query("UPDATE settings SET ksef_token_enc = 'x', ksef_sync_from = '2026-01-01', ksef_last_success_at = '2100-01-01', ksef_last_error = NULL");
   });
 
   const setHoliday = (year: number, month: number | null) => post('/ustawienia/wakacje', { year: String(year), month: month === null ? '' : String(month) });
@@ -164,5 +166,13 @@ describe('wakacje składkowe', { skip: skipWithoutDb }, () => {
     const dec = await setHoliday(2026, 12);
     assert.equal(dec.status, 409);
     assert.match(await dec.text(), /styczeń 2027/);
+  });
+  it('przypomnienie o RWS bez pliku stawek roku wakacji: dane do wniosku są, kwoty „około …” nie ma', async () => {
+    nowMs = Date.parse('2027-12-05T10:00:00Z');
+    await holidayInDb(2028, 1); // config/years/2028.json jeszcze nie istnieje
+    const page = await (await get('/miesiac/2027/12')).text();
+    assert.match(page, /Złóż wniosek RWS do 31\.12\.2027/);
+    assert.match(page, /01\/2028/);
+    assert.doesNotMatch(page, /Zwolnienie obejmie około/);
   });
 });

@@ -26,7 +26,7 @@ async function downloadDra(ctx: RouteContext, year: number, month: number) {
     ...(s.result.holiday ? { exempt: s.exemptSocial } : {}),
   });
   send(ctx.res, 200, xml, 'application/xml; charset=utf-8', {
-    'Content-Disposition': `attachment; filename="DRA-${year}-${String(month).padStart(2, '0')}.xml"`,
+    'Content-Disposition': `attachment; filename="ZUS-${year}-${String(month).padStart(2, '0')}.xml"`,
   });
 }
 
@@ -54,14 +54,15 @@ export const monthCloseRoute: Route = async (ctx) => {
   if (ctx.method !== 'POST') return false;
 
   if (action === 'zamknij') {
+    const form = await readForm(ctx.req);
     try {
-      await closeMonth(ctx.db, year, month, ctx.now());
+      await closeMonth(ctx.db, year, month, ctx.now(), { ksefConfirmed: form.get('ksef_ok') === 'tak' });
     } catch (error) {
       if (!(error instanceof HttpError) || error.status !== 409) throw error;
       // Coś się zmieniło od podglądu (np. doszła faktura) – pokazujemy podgląd z aktualnymi przeszkodami.
       const preview = await previewMonth(ctx.db, year, month, ctx.now());
       if (preview.status === 'closed') throw error;
-      send(ctx.res, 409, monthClosePage({ user: ctx.user, preview }).value);
+      send(ctx.res, 409, monthClosePage({ user: ctx.user, preview, error: error.message }).value);
       return true;
     }
     redirect(ctx.res, monthHref(year, month));

@@ -14,3 +14,12 @@ export function currentMonth(nowMs = Date.now()): { year: number; month: number 
 export function lastDayOfMonth(year: number, month: number): string {
   return new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10);
 }
+
+/** Nazwy miesięcy w mianowniku, małą literą. */
+export const MONTH_NAMES = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'] as const;
+
+/** „październik”. */
+export const monthName = (month: number): string => MONTH_NAMES[month - 1]!;
+
+/** „Październik” – na początek zdania i w tytułach. */
+export const monthTitle = (month: number): string => monthName(month).charAt(0).toUpperCase() + monthName(month).slice(1);

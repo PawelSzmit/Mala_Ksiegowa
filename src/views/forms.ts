@@ -1,7 +1,7 @@
 import { html, type Html } from './html.ts';
 import { layout, type LayoutUser } from './layout.ts';
 import { amountInput, monthHref } from './format.ts';
-import { MONTH_NAMES } from './pages.ts';
+import { MONTH_NAMES, monthTitle } from '../dates.ts';
 
 const errorBox = (error?: string) => (error ? html`<p class="error" role="alert">${error}</p>` : '');
 
@@ -60,7 +60,7 @@ export interface CashValues {
 }
 
 export function cashReportPage(p: { user: LayoutUser; year: number; month: number; values: CashValues; existing: { hasPhoto: boolean; amount: number } | null; error?: string }): Html {
-  const label = `${MONTH_NAMES[p.month - 1]} ${p.year}`;
+  const label = `${monthTitle(p.month)} ${p.year}`;
   const base = `/kasa/${p.year}/${String(p.month).padStart(2, '0')}`;
   return layout(
     'Raport z kasy',
@@ -126,8 +126,6 @@ export interface HolidayYear {
   month: number | null;
 }
 
-const HOLIDAY_MONTHS = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
-
 function holidayCard(years: HolidayYear[], error?: string, saved?: boolean, notice?: string): Html {
   return html`<div class="card" id="wakacje">
   <h1>Wakacje składkowe</h1>
@@ -140,7 +138,7 @@ function holidayCard(years: HolidayYear[], error?: string, saved?: boolean, noti
     <label for="holiday-${String(y.year)}">Rok ${String(y.year)}</label>
     <select id="holiday-${String(y.year)}" name="month">
       <option value="" ${y.month === null ? html`selected` : ''}>bez wakacji</option>
-      ${HOLIDAY_MONTHS.map((name, i) => html`<option value="${String(i + 1)}" ${y.month === i + 1 ? html`selected` : ''}>${name}</option>`)}
+      ${MONTH_NAMES.map((name, i) => html`<option value="${String(i + 1)}" ${y.month === i + 1 ? html`selected` : ''}>${name}</option>`)}
     </select>
     <button type="submit" class="secondary">Zapisz</button>
   </form>`)}

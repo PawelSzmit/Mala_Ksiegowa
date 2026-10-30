@@ -2,16 +2,15 @@
 // Kolejność: miesiące roku zamyka się po kolei, bo PIT i zdrowotna liczą się narastająco od stycznia.
 import { assertMonthOpen, deleteKpirEntry, inTransaction, RECEIVED_DATE_SQL, upsertKpirEntry, type Queryable } from '../db/books.ts';
 import type { Db } from '../db/pool.ts';
-import { lastDayOfMonth, warsawToday } from '../dates.ts';
+import { lastDayOfMonth, monthName, warsawToday } from '../dates.ts';
+export { monthName } from '../dates.ts';
 import { HttpError } from '../http/http.ts';
-import { costBookingDate } from '../rules/booking.ts';
+import { costBookingDate, LATE_INVOICE_LAST_DAY } from '../rules/booking.ts';
 import { loadYearConfig, type YearConfig } from '../rules/config.ts';
 import { computeYear, type YearMonthResult } from '../rules/year.ts';
 import { socialContributions, type SocialContributions } from '../rules/zus.ts';
 import { isValidPesel, type DraPayer } from '../zus/kedu-dra.ts';
 
-const MONTH_NAMES = ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
-export const monthName = (month: number) => MONTH_NAMES[month - 1]!;
 const mm = (month: number) => String(month).padStart(2, '0');
 
 /** Dzień, w którym Paweł płaci składki ZUS (ustawowy termin to 20.); FP zapłacony tego dnia trafia do księgi. */
@@ -42,7 +41,17 @@ export interface MonthClosePreview extends SavedMonthResult {
   needsDecemberIncome: boolean;
   /** Poprzednie wyliczenie (po ponownym otwarciu) – do porównania kwot. */
   previous: SavedMonthResult | null;
+  /**
+   * Pobieranie z KSeF nie działa albo dawno się nie udało – mogą brakować faktur kosztowych. Zamknięcie wymaga wtedy
+   * świadomego potwierdzenia (KSeF bywa niedostępny dłużej, więc to nie twarda przeszkoda).
+   */
+  ksefProblem: string | null;
+  /** Ostatnie udane pobranie faktur z KSeF (pokazywane na ekranie zamknięcia). */
+  ksefLastSuccessAt: Date | null;
 }
+
+/** Ile może minąć od ostatniego udanego pobrania z KSeF (zadanie działa raz dziennie, jedna nieudana noc jest w porządku). */
+export const KSEF_FRESH_HOURS = 48;
 
 export interface PayerRow {
   nip: string | null;
@@ -104,7 +113,10 @@ export async function previewMonth(db: Queryable, year: number, month: number, n
   const yearsRes = await db.query<{ year: number; holiday_month: number | null; previous_december_income: string | null }>(
     'SELECT year, holiday_month, previous_december_income FROM years WHERE year IN ($1, $1 - 1)', [year],
   );
-  const settings = await db.query<{ voluntary_sickness: boolean }>('SELECT voluntary_sickness FROM settings WHERE id = 1');
+  const settings = await db.query<{ voluntary_sickness: boolean; ksef_configured: boolean; ksef_last_success_at: Date | null; ksef_last_error: string | null }>(
+    `SELECT voluntary_sickness, (ksef_token_enc IS NOT NULL AND ksef_sync_from IS NOT NULL) AS ksef_configured, ksef_last_success_at, ksef_last_error
+     FROM settings WHERE id = 1`,
+  );
   const payer = await loadPayer(db);
   const pending = await pendingInvoicesFor(db, year, month);
 
@@ -140,6 +152,23 @@ export async function previewMonth(db: Queryable, year: number, month: number, n
 
   const config = tryLoadConfig(year);
   if (!config) throw new HttpError(409, `Brak ustawień stawek na rok ${year} – trzeba je dodać, zanim zamkniesz miesiąc.`);
+  if (config.status === 'prognoza') {
+    blockers.push(`Stawki na ${year} rok (podstawa składek ZUS, skala PIT) są jeszcze prognozą – trzeba je potwierdzić i zaktualizować w aplikacji, inaczej kwoty i plik DRA byłyby błędne.`);
+  }
+
+  const today = warsawToday(nowMs);
+  const s = settings.rows[0]!;
+  let ksefProblem: string | null = null;
+  if (!s.ksef_configured) ksefProblem = 'Pobieranie faktur z KSeF nie jest ustawione – w księdze mogą brakować kosztów.';
+  else if (s.ksef_last_error) ksefProblem = `Ostatnie pobieranie z KSeF nie powiodło się (${s.ksef_last_error}) – w księdze mogą brakować kosztów.`;
+  else if (!s.ksef_last_success_at || nowMs - s.ksef_last_success_at.getTime() > KSEF_FRESH_HOURS * 3600_000) {
+    ksefProblem = 'Faktury z KSeF nie były pobierane od ponad 2 dni – w księdze mogą brakować kosztów. Użyj „Sprawdź teraz” na stronie Faktury.';
+  }
+  // Zamykanie w dniach 1–9 następnego miesiąca: faktura za ten miesiąc może jeszcze przyjść (zasada 9. dnia).
+  const next = month === 12 ? { y: year + 1, m: 1 } : { y: year, m: month + 1 };
+  if (today.startsWith(`${next.y}-${mm(next.m)}`) && Number(today.slice(8, 10)) <= LATE_INVOICE_LAST_DAY) {
+    warnings.push(`Do ${LATE_INVOICE_LAST_DAY}. dnia mogą jeszcze przyjść faktury za ten miesiąc – wtedy trzeba będzie go otworzyć ponownie i przeliczyć kwoty.`);
+  }
   const months = Array.from({ length: month }, (_, i) => {
     const row = sums.rows.find((r) => r.month === i + 1);
     return { month: i + 1, revenue: Number(row?.revenue ?? 0), costs: Number(row?.costs ?? 0) };
@@ -151,7 +180,7 @@ export async function previewMonth(db: Queryable, year: number, month: number, n
     holidayMonths: thisYear?.holiday_month ? [thisYear.holiday_month] : [],
     previousDecemberHoliday: lastYear?.holiday_month === 12,
     previousDecemberHealthIncome,
-    voluntarySickness: settings.rows[0]!.voluntary_sickness,
+    voluntarySickness: s.voluntary_sickness,
   });
   const result = computed.months[month - 1]!;
   const previousMonthIncome = month === 1 ? (previousDecemberHealthIncome ?? 0) : computed.months[month - 2]!.healthIncome;
@@ -162,21 +191,25 @@ export async function previewMonth(db: Queryable, year: number, month: number, n
     warnings: [...warnings, ...computed.warnings.filter((w) => month === 1 || !w.startsWith('Brak dochodu z grudnia'))],
     needsDecemberIncome: month === 1 && previousDecemberHealthIncome === undefined,
     previous: state(month)?.results ?? null,
+    ksefProblem, ksefLastSuccessAt: s.ksef_last_success_at,
     result, previousMonthIncome,
     socialBase: config.social.base,
     accidentRate: config.social.rates.wypadkowe,
     configStatus: config.status,
-    ...(result.holiday ? { exemptSocial: socialContributions(config, { voluntarySickness: settings.rows[0]!.voluntary_sickness }) } : {}),
+    ...(result.holiday ? { exemptSocial: socialContributions(config, { voluntarySickness: s.voluntary_sickness }) } : {}),
   };
 }
 
 /** Zamyka miesiąc: wpis Funduszu Pracy do księgi (kol. 15), zapis wyliczenia, blokada zmian. */
-export async function closeMonth(db: Db, year: number, month: number, nowMs: number): Promise<SavedMonthResult> {
+export async function closeMonth(db: Db, year: number, month: number, nowMs: number, opts: { ksefConfirmed?: boolean } = {}): Promise<SavedMonthResult> {
   return inTransaction(db, async (tx) => {
     await tx.query('INSERT INTO months (year, month) VALUES ($1, $2) ON CONFLICT DO NOTHING', [year, month]);
     await tx.query('SELECT 1 FROM months WHERE year = $1 AND month = $2 FOR UPDATE', [year, month]);
+    // Miesiąc wakacji nie może się zmienić w trakcie zamykania (saveHolidayMonth blokuje ten wiersz FOR UPDATE).
+    await tx.query('SELECT 1 FROM years WHERE year IN ($1, $1 - 1) FOR SHARE', [year]);
     const preview = await previewMonth(tx, year, month, nowMs);
     if (preview.blockers.length) throw new HttpError(409, preview.blockers.join(' '));
+    if (preview.ksefProblem && !opts.ksefConfirmed) throw new HttpError(409, `${preview.ksefProblem} Zaznacz potwierdzenie, jeśli mimo to chcesz zamknąć miesiąc.`);
 
     // Fundusz Pracy zapłacony w tym miesiącu (za poprzedni) to koszt tego miesiąca – wpis w księdze, kol. 15.
     const fp = preview.result.socialPaid.funduszPracy;

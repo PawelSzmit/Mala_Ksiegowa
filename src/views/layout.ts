@@ -78,6 +78,7 @@ table.book.summary { max-width: 900px; }
 .card > h2:first-child { margin-top: 0; }
 .row > strong, .row > span:last-child > strong { white-space: nowrap; padding-left: 12px; }
 .row > span.amount { white-space: nowrap; padding-left: 12px; }
+#wakacje form.row label { white-space: nowrap; margin: 0 8px 0 0; }
 `;
 
 export type LayoutUser = { username: string };

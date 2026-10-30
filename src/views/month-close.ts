@@ -3,8 +3,8 @@ import type { MonthClosePreview, SavedMonthResult } from '../month/close.ts';
 import { PIT_PAYMENT_DAY, ZUS_PAYMENT_DAY } from '../month/close.ts';
 import { html, type Html } from './html.ts';
 import { layout, type LayoutUser } from './layout.ts';
-import { monthHref, pln } from './format.ts';
-import { MONTH_NAMES } from './pages.ts';
+import { dateTime, monthHref, pln } from './format.ts';
+import { monthTitle } from '../dates.ts';
 
 const next = (year: number, month: number) => (month === 12 ? { y: year + 1, m: 1 } : { y: year, m: month + 1 });
 const dueDate = (year: number, month: number, day: number) => {
@@ -45,15 +45,17 @@ function differences(now: SavedMonthResult, before: SavedMonthResult): Html | ''
 </div>`;
 }
 
-export function monthClosePage(p: { user: LayoutUser; preview: MonthClosePreview }): Html {
+export function monthClosePage(p: { user: LayoutUser; preview: MonthClosePreview; error?: string }): Html {
   const v = p.preview;
-  const name = `${MONTH_NAMES[v.month - 1]} ${v.year}`;
+  const name = `${monthTitle(v.month)} ${v.year}`;
   const base = `/miesiac/${v.year}/${mm(v.month)}`;
   return layout(
     `Zamknięcie: ${name}`,
     html`<div class="card"><h1>Zamknięcie miesiąca: ${name}</h1>
   <p class="muted">Kwoty policzone z księgi. Po zamknięciu zmiany w tym miesiącu wymagają świadomego ponownego otwarcia.</p>
+  <p class="hint">Faktury z KSeF ostatnio pobrane: ${v.ksefLastSuccessAt ? dateTime(v.ksefLastSuccessAt) : 'jeszcze nigdy'}.</p>
 </div>
+${p.error && !v.blockers.length ? html`<div class="card error" role="alert">${p.error}</div>` : ''}
 ${v.blockers.length ? html`<div class="card error" role="alert"><h2>Zanim zamkniesz</h2><ul>${v.blockers.map((b) => html`<li>${b}</li>`)}</ul></div>` : ''}
 ${v.warnings.length ? html`<div class="card notice"><h2>Uwagi</h2><ul>${v.warnings.map((w) => html`<li>${w}</li>`)}</ul></div>` : ''}
 ${v.needsDecemberIncome ? html`<div class="card">
@@ -69,6 +71,8 @@ ${v.previous ? differences(v, v.previous) : ''}
 <div class="card"><h2>Do zapłaty</h2>${amountsTable(v, v.year, v.month)}</div>
 <div class="card">
   <form method="post" action="${base}/zamknij">
+    ${v.ksefProblem ? html`<p class="warning">${v.ksefProblem}</p>
+    <label><input type="checkbox" name="ksef_ok" value="tak" required> Sprawdziłem – wszystkie faktury za ten miesiąc są w księdze, zamykam mimo to</label>` : ''}
     <button type="submit" ${v.blockers.length ? html`disabled` : ''}>Zamknij miesiąc</button>
   </form>
   <p class="hint">Po zamknięciu pobierzesz plik DRA do eZUS. <a href="${monthHref(v.year, v.month)}">← wróć do miesiąca</a></p>
