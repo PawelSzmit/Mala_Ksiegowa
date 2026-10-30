@@ -22,9 +22,33 @@ button.link { background: none; color: var(--accent); padding: 0; margin: 0; }
 nav.months { display: flex; justify-content: space-between; margin-bottom: 16px; }
 a { color: var(--accent); }
 .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 13px; background: var(--line); }
+.badge-warn { background: #f3d9a4; color: #4a3500; }
+h2 { font-size: 19px; margin: 24px 0 8px; }
+nav.main { display: flex; gap: 16px; padding: 8px 16px; background: var(--card); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+nav.main a { text-decoration: none; }
+nav.main a.active { font-weight: 700; text-decoration: underline; }
+.notice { border-left: 4px solid var(--accent); }
+.card.error { border-left: 4px solid var(--danger); }
+.warning { padding: 8px; border-radius: 6px; background: var(--bg); }
+button.secondary { background: var(--line); color: var(--text); }
+.decision button { margin-right: 8px; }
+select, textarea { width: 100%; padding: 10px; font-size: 16px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); }
+input[type=file] { padding: 6px; }
+ul.items { margin: 8px 0 0; padding-left: 20px; }
+.row form { display: inline; }
+.actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 16px; }
+.actions button { margin-top: 0; }
+.actions a.button { display: inline-block; padding: 10px 16px; border-radius: 6px; background: var(--accent); color: #fff; text-decoration: none; }
+.hint { font-size: 14px; color: var(--muted); margin: 4px 0 0; }
+.card > h2:first-child { margin-top: 0; }
+.row > strong, .row > span:last-child > strong { white-space: nowrap; padding-left: 12px; }
 `;
 
-export function layout(title: string, body: Html, user?: { username: string }): Html {
+export type LayoutUser = { username: string };
+type Section = 'miesiac' | 'faktury' | 'ustawienia';
+
+export function layout(title: string, body: Html, user?: LayoutUser, active?: Section): Html {
+  const link = (href: string, label: string, section: Section) => html`<a href="${href}" class="${active === section ? 'active' : ''}">${label}</a>`;
   return html`<!doctype html>
 <html lang="pl">
 <head>
@@ -38,6 +62,7 @@ export function layout(title: string, body: Html, user?: { username: string }): 
   <strong>Mała Księgowa</strong>
   ${user ? html`<form method="post" action="/wyloguj"><span class="muted">${user.username}</span> · <button class="link" type="submit">Wyloguj</button></form>` : ''}
 </header>
+${user ? html`<nav class="main">${link('/', 'Miesiąc', 'miesiac')}${link('/faktury', 'Faktury', 'faktury')}${link('/ustawienia', 'Ustawienia', 'ustawienia')}</nav>` : ''}
 <main>${body}</main>
 </body>
 </html>`;

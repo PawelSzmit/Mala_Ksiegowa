@@ -46,17 +46,24 @@ export async function attemptLogin(
   const passwordOk = await verifyPassword(input.password, user.password_hash);
   const step = passwordOk ? verifyTotp(decryptSecret(user.totp_secret_enc, key), input.code.trim(), Number(user.totp_last_step), nowMs) : null;
 
-  if (step === null) {
-    const failed = user.failed_logins + 1;
-    if (failed >= MAX_FAILED_LOGINS) {
-      const lockedUntil = new Date(nowMs + LOCK_MINUTES * 60_000);
-      await db.query('UPDATE users SET failed_logins = 0, locked_until = $2 WHERE id = $1', [user.id, lockedUntil]);
-      return { ok: false, reason: 'locked', lockedUntil };
-    }
-    await db.query('UPDATE users SET failed_logins = $2 WHERE id = $1', [user.id, failed]);
-    return { ok: false, reason: 'invalid' };
+  // Liczniki zmieniamy jednym zapytaniem w bazie, a nie „odczytaj → zapisz”: wiele prób wysłanych naraz
+  // nie może zgubić porażek ani dwa razy przepuścić tego samego kodu.
+  if (step !== null) {
+    const ok = await db.query(
+      'UPDATE users SET failed_logins = 0, locked_until = NULL, totp_last_step = $2 WHERE id = $1 AND totp_last_step < $2 AND (locked_until IS NULL OR locked_until <= $3) RETURNING id',
+      [user.id, step, new Date(nowMs)],
+    );
+    if (ok.rowCount) return { ok: true, userId: user.id };
   }
 
-  await db.query('UPDATE users SET failed_logins = 0, locked_until = NULL, totp_last_step = $2 WHERE id = $1', [user.id, step]);
-  return { ok: true, userId: user.id };
+  const lockedUntil = new Date(nowMs + LOCK_MINUTES * 60_000);
+  const { rows: [after] } = await db.query<{ failed_logins: number; locked_until: Date | null }>(
+    `UPDATE users SET
+       failed_logins = CASE WHEN failed_logins + 1 >= $2 THEN 0 ELSE failed_logins + 1 END,
+       locked_until  = CASE WHEN failed_logins + 1 >= $2 THEN $3 ELSE locked_until END
+     WHERE id = $1 RETURNING failed_logins, locked_until`,
+    [user.id, MAX_FAILED_LOGINS, lockedUntil],
+  );
+  if (after?.locked_until && after.locked_until.getTime() > nowMs) return { ok: false, reason: 'locked', lockedUntil: after.locked_until };
+  return { ok: false, reason: 'invalid' };
 }

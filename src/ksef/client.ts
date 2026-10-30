@@ -16,8 +16,19 @@ export interface KsefClientOptions {
   pollIntervalMs?: number;
   /** Ile razy sprawdzać status logowania, zanim się poddamy. */
   pollAttempts?: number;
-  /** Ile razy czekać po odpowiedzi 429 (zbyt wiele żądań). */
+  /** Ile razy czekać po odpowiedzi 429 (zbyt wiele żądań). 0 = od razu błąd (przycisk „sprawdź teraz”). */
   maxRateLimitRetries?: number;
+  /** Najdłuższe czekanie po 429 (s). Gdy KSeF każe czekać dłużej, zgłaszamy błąd zamiast wisieć. */
+  maxRetryWaitSeconds?: number;
+}
+
+/** Wynik jednego okna przyrostowego pobierania (wg „przyrostowe pobieranie faktur” MF). */
+export interface MetadataWindow {
+  invoices: InvoiceMetadata[];
+  /** Od tej chwili zaczyna się następne okno: HWM, `to` albo – przy ucięciu – data ostatniej faktury. */
+  nextFrom: string;
+  /** true, gdy KSeF uciął wynik (limit 10 000) – trzeba od razu pobrać kolejne okno. */
+  truncated: boolean;
 }
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -32,6 +43,7 @@ export class KsefClient {
   private readonly pollIntervalMs: number;
   private readonly pollAttempts: number;
   private readonly maxRateLimitRetries: number;
+  private readonly maxRetryWaitSeconds: number;
 
   private session: KsefSession | null = null;
   private credentials: { ksefToken: string; nip: string } | null = null;
@@ -42,6 +54,7 @@ export class KsefClient {
     this.pollIntervalMs = options.pollIntervalMs ?? 1000;
     this.pollAttempts = options.pollAttempts ?? 30;
     this.maxRateLimitRetries = options.maxRateLimitRetries ?? 3;
+    this.maxRetryWaitSeconds = options.maxRetryWaitSeconds ?? 10;
   }
 
   // --- logowanie -----------------------------------------------------------
@@ -151,6 +164,44 @@ export class KsefClient {
     }
   }
 
+  /**
+   * Jedno okno pobierania przyrostowego: faktury trwale zapisane od `from` (po dacie PermanentStorage),
+   * ograniczone do znacznika kompletności (HWM), strona po stronie. Gdy KSeF utnie wynik, zwraca to, co dostał,
+   * i `truncated = true` – następne okno zaczyna się od daty ostatniej faktury (duplikaty odcina baza).
+   */
+  async queryMetadataWindow(options: { from: string; to?: string; pageSize?: number; subjectType?: InvoiceQueryOptions['subjectType'] }): Promise<MetadataWindow> {
+    const pageSize = options.pageSize ?? 100;
+    const invoices: InvoiceMetadata[] = [];
+    for (let pageOffset = 0; ; pageOffset += 1) {
+      const page = await this.authorized<{ hasMore?: boolean; isTruncated?: boolean; permanentStorageHwmDate?: string | null; invoices?: InvoiceMetadata[] }>(
+        'POST',
+        `/invoices/query/metadata?sortOrder=Asc&pageOffset=${pageOffset}&pageSize=${pageSize}`,
+        {
+          subjectType: options.subjectType ?? 'Subject2',
+          dateRange: {
+            dateType: 'PermanentStorage',
+            from: options.from,
+            ...(options.to ? { to: options.to } : {}),
+            restrictToPermanentStorageHwmDate: true,
+          },
+        },
+      );
+      invoices.push(...(page.invoices ?? []));
+      if (page.isTruncated && page.hasMore) {
+        const last = invoices[invoices.length - 1];
+        if (!last) throw new KsefError('KSeF uciął pusty wynik – nieoczekiwana odpowiedź', 502, page);
+        return { invoices, nextFrom: last.permanentStorageDate, truncated: true };
+      }
+      if (!page.hasMore) {
+        const hwm = page.permanentStorageHwmDate ?? undefined;
+        // Koniec okna: wcześniejsza z dat `to` i HWM (przy restrictToPermanentStorageHwmDate KSeF nie wyjdzie poza HWM).
+        const end = options.to && hwm ? (Date.parse(options.to) < Date.parse(hwm) ? options.to : hwm) : (hwm ?? options.to);
+        if (!end) throw new KsefError('KSeF nie zwrócił znacznika kompletności (permanentStorageHwmDate)', 502, page);
+        return { invoices, nextFrom: end, truncated: false };
+      }
+    }
+  }
+
   /** Surowy XML faktury (format FA(3)) po numerze KSeF. */
   async getInvoiceXml(ksefNumber: string): Promise<string> {
     return this.authorized<string>('GET', `/invoices/ksef/${encodeURIComponent(ksefNumber)}`);
@@ -182,10 +233,13 @@ export class KsefClient {
         body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
       });
 
-      if (response.status === 429 && attempt < this.maxRateLimitRetries) {
+      if (response.status === 429) {
         const waitSeconds = Number(response.headers.get('Retry-After')) || 1;
-        await sleep(waitSeconds * 1000);
-        continue;
+        if (attempt < this.maxRateLimitRetries && waitSeconds <= this.maxRetryWaitSeconds) {
+          await sleep(waitSeconds * 1000);
+          continue;
+        }
+        throw new KsefError(`KSeF prosi o przerwę (zbyt wiele zapytań), spróbuj za ${Math.ceil(waitSeconds / 60)} min`, 429, { retryAfterSeconds: waitSeconds });
       }
 
       const text = await response.text();

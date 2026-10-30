@@ -11,15 +11,15 @@ import { hashPassword } from '../src/auth/password.ts';
 import { base32Decode, base32Encode, currentStep, totpCode } from '../src/auth/totp.ts';
 import { encryptSecret } from '../src/crypto/secret-box.ts';
 import { migrate } from '../src/db/migrate.ts';
-import { createPool, type Db } from '../src/db/pool.ts';
+import type { Db } from '../src/db/pool.ts';
+import { freshTestDb, skipWithoutDb } from './helpers/test-db.ts';
 
-const DB_URL = process.env.TEST_DATABASE_URL;
 const PASSWORD = 'haslo-testowe-123';
 const SECRET = base32Encode(randomBytes(20));
 const KEY = randomBytes(32);
 const START = Date.parse('2026-10-15T10:00:00Z');
 
-describe('aplikacja: logowanie i dostęp', { skip: DB_URL ? false : 'brak TEST_DATABASE_URL – pomijam testy z bazą' }, () => {
+describe('aplikacja: logowanie i dostęp', { skip: skipWithoutDb }, () => {
   let db: Db;
   let server: Server;
   let base = '';
@@ -42,9 +42,7 @@ describe('aplikacja: logowanie i dostęp', { skip: DB_URL ? false : 'brak TEST_D
   const cookieFrom = (res: Response) => res.headers.get('set-cookie')!.split(';')[0]!;
 
   before(async () => {
-    db = createPool(DB_URL!);
-    await db.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
-    await migrate(db);
+    db = await freshTestDb();
     server = createServer(createApp({ db, encryptionKey: KEY, cookieSecure: true, now: () => nowMs }));
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
     base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -116,6 +114,20 @@ describe('aplikacja: logowanie i dostęp', { skip: DB_URL ? false : 'brak TEST_D
     assert.match(await blocked.text(), /Zbyt wiele nieudanych prób/);
     nowMs += LOCK_MINUTES * 60_000 + 1000;
     assert.equal((await login()).status, 303);
+  });
+
+  it('równoległe próby nie omijają blokady ani nie przepuszczają kodu dwa razy', async () => {
+    const bad = await Promise.all(Array.from({ length: 20 }, () => login({ password: 'zle-haslo-123456' })));
+    assert.ok(bad.some((r) => r.status === 429), 'konto powinno zostać zablokowane');
+    assert.equal((await login()).status, 429);
+    nowMs += LOCK_MINUTES * 60_000 + 1000;
+    const same = await Promise.all(Array.from({ length: 5 }, () => login()));
+    assert.equal(same.filter((r) => r.status === 303).length, 1);
+  });
+
+  it('uszkodzone ciasteczko nie psuje strony logowania', async () => {
+    const res = await request('/logowanie', { cookie: 'obce=%E0%A4%A; mk_sesja=x' });
+    assert.equal(res.status, 200);
   });
 
   it('wylogowanie unieważnia sesję', async () => {

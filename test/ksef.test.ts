@@ -1,127 +1,10 @@
 import assert from 'node:assert/strict';
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
-import type { AddressInfo } from 'node:net';
-import { constants, privateDecrypt, X509Certificate } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { constants, privateDecrypt } from 'node:crypto';
 import { after, before, beforeEach, describe, it } from 'node:test';
 import { KsefClient } from '../src/ksef/client.ts';
 import { encryptKsefToken } from '../src/ksef/crypto.ts';
 import { KsefError } from '../src/ksef/types.ts';
-
-const privateKeyPem = readFileSync(new URL('./fixtures/fake-ksef-key.pem', import.meta.url), 'utf8');
-const certPem = readFileSync(new URL('./fixtures/fake-ksef-cert.pem', import.meta.url), 'utf8');
-const certDerBase64 = new X509Certificate(certPem).raw.toString('base64');
-
-const NIP = '1234563218';
-const GOOD_TOKEN = 'dobry-token-testowy';
-
-/** Udawany KSeF: trzyma się opisu z oficjalnej dokumentacji (logowanie tokenem, metadane, faktura). */
-class FakeKsef {
-  server!: Server;
-  baseUrl = '';
-  accessTokenValid = true;
-  redeemed = new Set<string>();
-  authPollsLeft = 1;
-  invoices: { ksefNumber: string; invoiceNumber: string; issueDate: string; grossAmount: number }[] = [];
-  seen: { method: string; url: string; auth?: string; body?: any }[] = [];
-  rateLimitOnce = false;
-  truncated = false;
-
-  async start() {
-    this.server = createServer((req, res) => void this.handle(req, res));
-    await new Promise<void>((resolve) => this.server.listen(0, '127.0.0.1', resolve));
-    this.baseUrl = `http://127.0.0.1:${(this.server.address() as AddressInfo).port}/v2`;
-  }
-  stop() {
-    this.server.close();
-  }
-  reset() {
-    this.accessTokenValid = true;
-    this.redeemed.clear();
-    this.authPollsLeft = 1;
-    this.invoices = [];
-    this.seen = [];
-    this.rateLimitOnce = false;
-    this.truncated = false;
-  }
-
-  private json(res: ServerResponse, status: number, body: unknown) {
-    res.writeHead(status, { 'content-type': 'application/json' });
-    res.end(JSON.stringify(body));
-  }
-
-  private async handle(req: IncomingMessage, res: ServerResponse) {
-    const chunks: Buffer[] = [];
-    for await (const chunk of req) chunks.push(chunk as Buffer);
-    const raw = Buffer.concat(chunks).toString('utf8');
-    const body = raw ? JSON.parse(raw) : undefined;
-    const auth = req.headers.authorization?.replace('Bearer ', '');
-    const url = new URL(req.url!, 'http://x');
-    const path = url.pathname.replace('/v2', '');
-    this.seen.push({ method: req.method!, url: req.url!, auth, body });
-
-    if (this.rateLimitOnce && path === '/auth/challenge') {
-      this.rateLimitOnce = false;
-      res.writeHead(429, { 'retry-after': '0' });
-      return res.end('{}');
-    }
-
-    if (req.method === 'POST' && path === '/auth/challenge') {
-      return this.json(res, 200, { challenge: 'chal-123', timestamp: new Date(1_700_000_000_000).toISOString(), timestampMs: 1_700_000_000_000 });
-    }
-    if (req.method === 'GET' && path === '/security/public-key-certificates') {
-      return this.json(res, 200, [
-        { certificate: 'AAAA', validFrom: '2020-01-01T00:00:00Z', validTo: '2099-01-01T00:00:00Z', usage: ['SymmetricKeyEncryption'] },
-        { certificate: certDerBase64, validFrom: '2020-01-01T00:00:00Z', validTo: '2099-01-01T00:00:00Z', usage: ['KsefTokenEncryption'] },
-      ]);
-    }
-    if (req.method === 'POST' && path === '/auth/ksef-token') {
-      const decrypted = privateDecrypt(
-        { key: privateKeyPem, padding: constants.RSA_PKCS1_OAEP_PADDING, oaepHash: 'sha256' },
-        Buffer.from(body.encryptedToken, 'base64'),
-      ).toString('utf8');
-      if (decrypted !== `${GOOD_TOKEN}|1700000000000` || body.contextIdentifier?.value !== NIP) {
-        return this.json(res, 401, { status: { code: 401, description: 'Unauthorized' } });
-      }
-      return this.json(res, 202, { referenceNumber: 'ref-1', authenticationToken: { token: 'temp-1', validUntil: '2099-01-01T00:00:00Z' } });
-    }
-    if (req.method === 'GET' && path === '/auth/ref-1') {
-      if (auth !== 'temp-1') return this.json(res, 401, {});
-      if (this.authPollsLeft-- > 0) return this.json(res, 200, { status: { code: 100, description: 'Uwierzytelnianie w toku' } });
-      return this.json(res, 200, { status: { code: 200, description: 'Uwierzytelnianie zakończone sukcesem' } });
-    }
-    if (req.method === 'POST' && path === '/auth/token/redeem') {
-      if (auth !== 'temp-1' || this.redeemed.has(auth)) return this.json(res, 400, { status: { code: 400 } });
-      this.redeemed.add(auth);
-      return this.json(res, 200, {
-        accessToken: { token: 'access-1', validUntil: '2099-01-01T00:00:00Z' },
-        refreshToken: { token: 'refresh-1', validUntil: '2099-01-08T00:00:00Z' },
-      });
-    }
-    if (req.method === 'POST' && path === '/auth/token/refresh') {
-      if (auth !== 'refresh-1') return this.json(res, 401, {});
-      this.accessTokenValid = true;
-      return this.json(res, 200, { accessToken: { token: 'access-2', validUntil: '2099-01-01T00:00:00Z' } });
-    }
-
-    // Od tej pory wymagany ważny token dostępu.
-    const expected = this.accessTokenValid ? 'access-1' : 'access-2';
-    if (auth !== expected && auth !== 'access-2') return this.json(res, 401, {});
-    if (auth === 'access-1' && !this.accessTokenValid) return this.json(res, 401, {});
-
-    if (req.method === 'POST' && path === '/invoices/query/metadata') {
-      const offset = Number(url.searchParams.get('pageOffset'));
-      const size = Number(url.searchParams.get('pageSize'));
-      const slice = this.invoices.slice(offset * size, offset * size + size);
-      return this.json(res, 200, { hasMore: (offset + 1) * size < this.invoices.length, isTruncated: this.truncated, invoices: slice });
-    }
-    if (req.method === 'GET' && path.startsWith('/invoices/ksef/')) {
-      res.writeHead(200, { 'content-type': 'application/xml' });
-      return res.end(`<Faktura><NrKSeF>${decodeURIComponent(path.split('/').pop()!)}</NrKSeF></Faktura>`);
-    }
-    return this.json(res, 404, {});
-  }
-}
+import { certDerBase64, FakeKsef, GOOD_TOKEN, NIP, privateKeyPem } from './helpers/fake-ksef.ts';
 
 const fake = new FakeKsef();
 const newClient = () => new KsefClient({ baseUrl: fake.baseUrl, pollIntervalMs: 1, pollAttempts: 5 });
@@ -197,13 +80,64 @@ describe('klient KSeF', () => {
     const client = newClient();
     await client.authenticateWithToken(GOOD_TOKEN, NIP);
     const xml = await client.getInvoiceXml('1234563218-20261001-ABC');
-    assert.match(xml, /<NrKSeF>1234563218-20261001-ABC<\/NrKSeF>/);
+    assert.match(xml, /<P_2>1234563218-20261001-ABC<\/P_2>/);
   });
 
   it('czeka i ponawia po odpowiedzi 429 (zbyt wiele żądań)', async () => {
     fake.rateLimitOnce = true;
     const session = await newClient().authenticateWithToken(GOOD_TOKEN, NIP);
     assert.equal(session.accessToken.token, 'access-1');
+  });
+
+  it('okno przyrostowe: pyta po dacie trwałego zapisu z ograniczeniem do HWM i zwraca HWM jako początek kolejnego okna', async () => {
+    fake.invoices = [
+      { ...makeInvoices(1)[0]!, permanentStorageDate: '2026-10-05T10:00:00.000Z' },
+      { ...makeInvoices(2)[1]!, permanentStorageDate: '2026-10-25T10:00:00.000Z' }, // po HWM – jeszcze niekompletne
+    ];
+    const client = newClient();
+    await client.authenticateWithToken(GOOD_TOKEN, NIP);
+    const window = await client.queryMetadataWindow({ from: '2026-10-01T00:00:00.000Z' });
+    assert.deepEqual(window.invoices.map((i) => i.ksefNumber), ['KSEF-1']);
+    assert.equal(window.nextFrom, fake.hwm);
+    assert.equal(window.truncated, false);
+    const body = fake.seen.find((r) => r.url.startsWith('/v2/invoices/query/metadata'))!.body;
+    assert.deepEqual(body.dateRange, { dateType: 'PermanentStorage', from: '2026-10-01T00:00:00.000Z', restrictToPermanentStorageHwmDate: true });
+  });
+
+  it('okno z datą końcową wcześniejszą niż HWM kończy się na tej dacie', async () => {
+    const client = newClient();
+    await client.authenticateWithToken(GOOD_TOKEN, NIP);
+    const window = await client.queryMetadataWindow({ from: '2026-01-01T00:00:00.000Z', to: '2026-04-01T00:00:00.000Z' });
+    assert.equal(window.nextFrom, '2026-04-01T00:00:00.000Z');
+  });
+
+  it('ucięty wynik: okno kończy się na dacie ostatniej faktury i oznacza ucięcie', async () => {
+    fake.invoices = makeInvoices(3).map((inv, i) => ({ ...inv, permanentStorageDate: `2026-10-0${i + 1}T10:00:00.000Z` }));
+    fake.truncateAfter = 2;
+    const client = newClient();
+    await client.authenticateWithToken(GOOD_TOKEN, NIP);
+    const window = await client.queryMetadataWindow({ from: '2026-10-01T00:00:00.000Z', pageSize: 10 });
+    assert.equal(window.invoices.length, 2);
+    assert.equal(window.truncated, true);
+    assert.equal(window.nextFrom, '2026-10-02T10:00:00.000Z');
+  });
+
+  it('429 z długim czekaniem albo bez ponawiania: od razu czytelny błąd z czasem przerwy', async () => {
+    fake.rateLimitMetadataSeconds = 600;
+    const client = new KsefClient({ baseUrl: fake.baseUrl, pollIntervalMs: 1, maxRateLimitRetries: 3, maxRetryWaitSeconds: 10 });
+    await client.authenticateWithToken(GOOD_TOKEN, NIP);
+    await assert.rejects(client.queryMetadataWindow({ from: '2026-10-01T00:00:00.000Z' }), (e: unknown) =>
+      e instanceof KsefError && e.status === 429 && /10 min/.test(e.message));
+  });
+
+  it('wygasły token odświeżający → logowanie od nowa i ponowienie zapytania', async () => {
+    const client = newClient();
+    await client.authenticateWithToken(GOOD_TOKEN, NIP);
+    fake.accessTokenValid = false;
+    fake.refreshExpired = true;
+    const window = await client.queryMetadataWindow({ from: '2026-10-01T00:00:00.000Z' });
+    assert.equal(window.truncated, false);
+    assert.equal(fake.logins, 2);
   });
 
   it('zapytanie bez logowania daje błąd, a nie wysyła żądania', async () => {

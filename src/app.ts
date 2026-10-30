@@ -4,7 +4,18 @@ import { createSession, deleteSession, findSessionUser, SESSION_COOKIE, SESSION_
 import type { Db } from './db/pool.ts';
 import { HttpError, isSameOrigin, parseCookies, readForm, redirect, send, sessionCookie } from './http/http.ts';
 import { STYLES } from './views/layout.ts';
-import { errorPage, loginPage, monthPage, type MonthView } from './views/pages.ts';
+import { errorPage, loginPage, monthPage, type MonthEntry, type MonthView } from './views/pages.ts';
+import { currentMonth } from './dates.ts';
+import type { SyncOptions } from './jobs/ksef-sync.ts';
+import { cashRoute } from './routes/cash.ts';
+import { loadSyncStatus, type Route, type RouteContext } from './routes/context.ts';
+import { costsRoute } from './routes/costs.ts';
+import { invoicesRoute } from './routes/invoices.ts';
+import { settingsRoute } from './routes/settings.ts';
+
+export { currentMonth };
+
+const ROUTES: Route[] = [invoicesRoute, costsRoute, cashRoute, settingsRoute];
 
 export interface AppDeps {
   db: Db;
@@ -12,27 +23,35 @@ export interface AppDeps {
   cookieSecure: boolean;
   /** Do testów: stały „teraz”. */
   now?: () => number;
+  /** Do testów: udawany KSeF. */
+  syncOptions?: Pick<SyncOptions, 'createClient'>;
 }
 
 type User = { id: number; username: string };
-
-/** Bieżący miesiąc w polskiej strefie czasowej. */
-export function currentMonth(nowMs = Date.now()): { year: number; month: number } {
-  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw', year: 'numeric', month: '2-digit' }).formatToParts(new Date(nowMs));
-  return { year: Number(parts.find((p) => p.type === 'year')!.value), month: Number(parts.find((p) => p.type === 'month')!.value) };
-}
 
 export function createApp(deps: AppDeps) {
   const now = deps.now ?? Date.now;
   const clearCookie = sessionCookie(SESSION_COOKIE, '', { secure: deps.cookieSecure, maxAgeSeconds: 0 });
 
   async function monthView(year: number, month: number): Promise<MonthView> {
-    const [m, inv, cash] = await Promise.all([
+    const [m, inv, cash, entries, sync] = await Promise.all([
       deps.db.query<{ status: 'open' | 'closed' }>('SELECT status FROM months WHERE year = $1 AND month = $2', [year, month]),
       deps.db.query<{ n: number }>("SELECT count(*)::int AS n FROM invoices WHERE status = 'to_review'"),
-      deps.db.query('SELECT 1 FROM cash_reports WHERE year = $1 AND month = $2', [year, month]),
+      deps.db.query<{ amount: number; has_photo: boolean }>('SELECT amount, photo IS NOT NULL AS has_photo FROM cash_reports WHERE year = $1 AND month = $2', [year, month]),
+      deps.db.query<MonthEntry>(
+        `SELECT k.source, k.source_id, k.entry_date, k.document_number, k.counterparty, k.description, k.revenue, k.other_costs,
+                (k.source = 'manual_cost' AND mc.attachment IS NOT NULL) AS has_attachment
+         FROM kpir_entries k LEFT JOIN manual_costs mc ON k.source = 'manual_cost' AND mc.id = k.source_id
+         WHERE k.year = $1 AND k.month = $2 ORDER BY k.entry_date, k.id`,
+        [year, month],
+      ),
+      loadSyncStatus(deps.db),
     ]);
-    return { year, month, status: m.rows[0]?.status ?? 'open', invoicesToReview: inv.rows[0]!.n, hasCashReport: cash.rowCount! > 0 };
+    const c = cash.rows[0];
+    return {
+      year, month, status: m.rows[0]?.status ?? 'open', invoicesToReview: inv.rows[0]!.n,
+      cashReport: c ? { amount: c.amount, hasPhoto: c.has_photo } : null, entries: entries.rows, sync,
+    };
   }
 
   async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -94,6 +113,9 @@ export function createApp(deps: AppDeps) {
       return send(res, 200, monthPage(await monthView(year, month), user).value);
     }
 
+    const ctx: RouteContext = { req, res, url, method, user, db: deps.db, encryptionKey: deps.encryptionKey, now, syncOptions: deps.syncOptions };
+    for (const handle of ROUTES) if (await handle(ctx)) return;
+
     throw new HttpError(404, 'Nie ma takiej strony.');
   }
 
@@ -102,7 +124,8 @@ export function createApp(deps: AppDeps) {
       await route(req, res);
     } catch (error) {
       if (error instanceof HttpError) {
-        send(res, error.status, errorPage(error.status, error.message).value);
+        if (!res.headersSent) send(res, error.status, errorPage(error.status, error.message).value);
+        else res.end();
         return;
       }
       console.error('Błąd aplikacji:', error);

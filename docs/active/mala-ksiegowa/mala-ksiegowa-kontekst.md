@@ -2,7 +2,7 @@
 
 Gałąź: `claude/project-thread-eptw6o` (kontynuacja `claude/project-thread-tqtl79`)
 Ostatnia aktualizacja: 2026-10-30
-Stan: Etapy 1–3 gotowe (KSeF, reguły podatkowe, szkielet z logowaniem). Etap 2 czeka na punkt kontrolny (sprawdzenie tabeli przykładów). Następny: etap 4 (faktury, koszty, kasa).
+Stan: Etapy 1–4 gotowe (KSeF, reguły, logowanie, faktury/koszty/kasa). Punkt kontrolny etapu 2 zaliczony 2026-10-30. Następny: etap 5 (księga KPiR).
 
 ## Kim jest użytkownik
 
@@ -123,7 +123,7 @@ Decyzje:
 - Podstawa i podatek PIT do pełnych złotych (art. 63 Ordynacji). Zaliczka = podatek narastająco − zaliczki należne wcześniej, nigdy ujemna.
 - Fundusz Pracy nie jest odliczeniem, tylko kosztem; `computeYear` dolicza zapłacony FP do kosztów sam – KPiR nie może go mieć drugi raz z ręki.
 - Domyślnie składki za miesiąc M są płacone w M+1 (termin 20.) i wtedy odliczane; można podać faktyczne wpłaty (`socialPaid`).
-- Zdrowotna: dochód nie bywa ujemny; strata i nadwyżka składek przechodzą na kolejne miesiące (liczenie narastające). Dosłowne czytanie art. 81 ust. 2c pkt 4 („minus dochody za poprzednie miesiące” po odliczeniu składek) dodawałoby składki z powrotem – liczymy jak programy księgowe. Do potwierdzenia na punkcie kontrolnym; różnice wyrównuje i tak roczne rozliczenie zdrowotnej.
+- Zdrowotna: dochód nie bywa ujemny; strata i nadwyżka składek przechodzą na kolejne miesiące (liczenie narastające). Dosłowne czytanie art. 81 ust. 2c pkt 4 („minus dochody za poprzednie miesiące” po odliczeniu składek) dodawałoby składki z powrotem – liczymy jak programy księgowe. Potwierdzone przez Pawła 2026-10-30; różnice wyrównuje i tak roczne rozliczenie zdrowotnej.
 - Wakacje: w tym miesiącu społeczne i FP = 0, zdrowotna normalnie; w następnym miesiącu nie ma czego odliczyć. Wniosek RWS w miesiącu poprzedzającym (`rwsApplicationMonth`).
 
 ### Review etapu 2 (2026-10-30)
@@ -137,6 +137,25 @@ Decyzje:
 - Testy: `npm test` (48); z bazą `TEST_DATABASE_URL=postgres://… npm test` (57) – test aplikacji kasuje i odtwarza schemat bazy testowej, nigdy nie wskazywać bazy produkcyjnej.
 - Sprawdzone: 57/57, typecheck czysty; ręcznie: założenie konta skryptem (także przez potok), logowanie hasłem + kodem, strona miesiąca, wylogowanie.
 - Uwaga: utrata `APP_ENCRYPTION_KEY` = trzeba od nowa wpisać token KSeF i założyć konto (TOTP). Klucz trzymać tylko w zmiennych środowiskowych cPanelu.
+
+### Review etapu 3 (2026-10-30)
+- Raport: `review-faza-3.md`. Decyzja: **można iść dalej z zastrzeżeniami** (0×P1, 2×P2, 6×P3).
+- Najważniejsze: (1) równoległe próby logowania omijają limit 5 prób (sprawdzone: 20 prób → licznik 2) – poprawić atomowym UPDATE; (2) zepsute ciasteczko daje 500 nawet na stronie logowania. Obie poprawki małe, zrobić na początku etapu 4.
+
+## Etap 4 – faktury, koszty, kasa (2026-10-30)
+- **Pobieranie z KSeF** (`src/jobs/ksef-sync.ts`, cron: `npm run sync` = `node scripts/ksef-sync.ts`; przycisk „Sprawdź teraz” na `/faktury`):
+  - okna po dacie `PermanentStorage` z `restrictToPermanentStorageHwmDate`, start = `settings.ksef_next_from` (pierwszy raz: północ czasu polskiego z `ksef_sync_from`), okno najwyżej 90 dni, najwyżej 5 okien na uruchomienie; przy ucięciu (`isTruncated`) kolejne okno od daty ostatniej faktury;
+  - najpierw zapis metadanych (unikalny numer KSeF = brak duplikatów), potem XML dla faktur bez treści (do 20 na uruchomienie); nieudane pobranie XML zostawia fakturę z kwotą z listy i ponawia następnym razem;
+  - przycisk: bez ponawiania po 429 i nie częściej niż co 5 min (`MANUAL_SYNC_COOLDOWN_MINUTES`); cron: czeka po 429 najwyżej 10 s;
+  - jedna synchronizacja naraz (`pg_try_advisory_lock`); komunikaty dla Pawła bez tokenu i szczegółów technicznych; stan w `settings.ksef_last_success_at/attempt_at/error`.
+  - Sprawdzone na prawdziwym testowym KSeF: znacznik kompletności (HWM) jest ok. 1–2 min za „teraz”, więc świeżo wystawiona faktura pojawia się przy kolejnym pobraniu – zgodnie z zasadami MF.
+- **Odczyt FA(3)**: `src/ksef/xml.ts` (mały, ścisły czytnik XML bez zależności), `src/ksef/parse-fa.ts` (P_2, P_1, Podmiot1 NIP/Nazwa, P_15, KodWaluty, RodzajFaktury, DaneFaKorygowanej, PrzyczynaKorekty, FaWiersz z P_11/P_11A i StanPrzed). Kwoty z tekstu na grosze bez liczb zmiennoprzecinkowych.
+- **Decyzje i księga**: `src/db/books.ts` – wpis do `kpir_entries` jednym `upsert` na dokument, zamknięty miesiąc (`months.status = 'closed'`) blokuje zmiany (409). Faktura → koszt w miesiącu daty wystawienia, kwota brutto (korekta: ujemna różnica). Waluta obca → Paweł wpisuje kwotę w zł (kurs NBP z dnia przed wystawieniem). „Cofnij decyzję” usuwa wpis.
+- **Koszt spoza KSeF** (`/koszty/nowy`) i **raport z kasy** (`/kasa/RRRR/MM`, jeden na miesiąc, przychód zawsze w miesiącu raportu): pliki do 8 MB, rodzaj rozpoznawany po zawartości (PDF/JPG/PNG/HEIC), trzymane w bazie, wydawane z nagłówkiem `CSP: sandbox`.
+- **Ustawienia** (`/ustawienia`): NIP z sumą kontrolną, token zapisywany zaszyfrowany i nigdy niepokazywany (puste pole = bez zmian), data początkowa nie z przyszłości, środowisko. Zmiana NIP/środowiska/daty = pobieranie od nowa.
+- Trasy podzielone na `src/routes/{invoices,costs,cash,settings}.ts`; migracja `002_faktury_koszty_kasa.sql`.
+- Przy okazji poprawki z review: etap 3 (P2-1 blokada logowania odporna na równoległe próby, P2-2 zepsute ciasteczko, P3-4, P3-5), etap 2 (P2-2 ujemne koszty), etap 1 (P2-1, P2-2, P3-1, P3-2, P3-3).
+- Testy: `npm test` 66 bez bazy, 98 z `TEST_DATABASE_URL` (testy z bazą idą po kolei: `--test-concurrency=1`). Udawany KSeF w `test/helpers/fake-ksef.ts`.
 
 ## Planowany układ plików
 

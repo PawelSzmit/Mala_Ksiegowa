@@ -18,8 +18,9 @@ export function summarizeKpir(months: KpirMonthTotals[]): KpirSummaryRow[] {
   let cumulativeCosts = 0;
   return months.map((m, i) => {
     if (m.month !== i + 1) throw new Error(`Miesiące księgi muszą iść po kolei od stycznia (pozycja ${i + 1} to miesiąc ${m.month})`);
-    if (!Number.isInteger(m.revenue) || !Number.isInteger(m.costs) || m.revenue < 0 || m.costs < 0) {
-      throw new Error(`Miesiąc ${m.month}: przychód i koszty muszą być nieujemnymi kwotami w groszach`);
+    // Koszty mogą wyjść ujemne, gdy faktura korygująca zmniejsza koszty bardziej niż reszta miesiąca je zwiększa.
+    if (!Number.isInteger(m.revenue) || !Number.isInteger(m.costs) || m.revenue < 0) {
+      throw new Error(`Miesiąc ${m.month}: przychód musi być nieujemną kwotą w groszach, koszty kwotą w groszach`);
     }
     cumulativeRevenue += m.revenue;
     cumulativeCosts += m.costs;

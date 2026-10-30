@@ -151,9 +151,17 @@ describe('księga: sumy', () => {
     ]);
     assert.deepEqual(rows.map((r) => [r.income, r.cumulativeIncome]), [[zl(70), zl(70)], [zl(-30), zl(40)]]);
   });
-  it('wymaga miesięcy po kolei i nieujemnych kwot', () => {
+  it('wymaga miesięcy po kolei i nieujemnego przychodu', () => {
     assert.throws(() => summarizeKpir([{ month: 2, revenue: 0, costs: 0 }]), /po kolei/);
-    assert.throws(() => summarizeKpir([{ month: 1, revenue: -1, costs: 0 }]), /nieujemnymi/);
+    assert.throws(() => summarizeKpir([{ month: 1, revenue: -1, costs: 0 }]), /nieujemną/);
+    assert.throws(() => summarizeKpir([{ month: 1, revenue: 0, costs: 1.5 }]), /w groszach/);
+  });
+  it('dopuszcza ujemne koszty miesiąca (faktura korygująca)', () => {
+    const rows = summarizeKpir([
+      { month: 1, revenue: zl(100), costs: zl(40) },
+      { month: 2, revenue: zl(100), costs: zl(-15) },
+    ]);
+    assert.deepEqual(rows.map((r) => [r.income, r.cumulativeCosts]), [[zl(60), zl(40)], [zl(115), zl(25)]]);
   });
 });
 
